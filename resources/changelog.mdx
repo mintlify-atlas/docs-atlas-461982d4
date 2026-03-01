@@ -1,0 +1,229 @@
+---
+title: Changelog
+description: Version history and updates for Strix
+---
+
+Track the evolution of Strix with detailed release notes for each version.
+
+## Version 0.8.2 (Current)
+
+**Release Date:** March 2026
+
+### What's New
+
+- **Enhanced Skills System** - Expanded skill categories including frameworks, technologies, and protocols
+- **Improved Agent Coordination** - Better multi-agent orchestration for complex testing scenarios
+- **Performance Optimizations** - Faster scan execution with prompt caching improvements
+- **Extended LLM Support** - Added support for additional Vertex AI and Bedrock models
+
+### Features
+
+- Added support for Gemini 3 Pro Preview models
+- Improved GraphQL testing capabilities with dedicated skill
+- Enhanced FastAPI and Next.js framework-specific testing
+- Added Supabase and Firebase security testing skills
+- Improved error messages and debugging information
+
+### Improvements
+
+- **Docker Runtime** - Better container lifecycle management and cleanup
+- **Memory Management** - Reduced memory footprint during long-running scans
+- **Report Generation** - Enhanced HTML and Markdown report formatting
+- **CLI Experience** - Improved terminal UI with better progress indicators
+
+### Bug Fixes
+
+- Fixed port conflict issues when running multiple scans
+- Resolved Docker image pull failures on slow connections
+- Fixed credential handling in authenticated testing scenarios
+- Corrected path resolution for Windows users
+- Fixed race condition in parallel agent execution
+
+### Dependencies
+
+- Updated LiteLLM to 1.81.1 for improved provider compatibility
+- Updated Textual to 4.0.0 for better TUI experience
+- Updated Docker SDK to 7.1.0 for enhanced container management
+- Updated Pydantic to 2.11.3 for better validation
+
+## Version 0.8.1
+
+**Release Date:** February 2026
+
+### Features
+
+- Added headless mode with `-n/--non-interactive` flag for CI/CD integration
+- Introduced scan modes: quick, standard, and deep
+- Added `--instruction-file` support for complex testing scenarios
+- Implemented automatic configuration persistence in `~/.strix/cli-config.json`
+
+### Improvements
+
+- Enhanced browser automation with multi-tab support
+- Improved SSRF detection and validation
+- Better handling of authentication workflows
+- Added support for custom Docker networks
+
+### Bug Fixes
+
+- Fixed terminal session management issues
+- Resolved proxy configuration conflicts
+- Corrected finding deduplication logic
+
+## Version 0.8.0
+
+**Release Date:** January 2026
+
+### Major Changes
+
+- **Graph of Agents** - Introduced multi-agent orchestration for comprehensive testing
+- **Skills System** - Added extensible skills for specialized knowledge
+- **Tool System Refactor** - Modular architecture for better maintainability
+
+### Features
+
+- Added multi-target support for simultaneous code and application testing
+- Implemented Python runtime for custom exploit development
+- Added HTTP proxy with Caido integration
+- Introduced structured finding reports with CVSS scoring
+
+### Improvements
+
+- Significantly improved vulnerability detection accuracy
+- Enhanced business logic flaw identification
+- Better handling of complex authentication scenarios
+- Improved error recovery and resilience
+
+## Version 0.7.5
+
+**Release Date:** December 2025
+
+### Features
+
+- Added support for Azure OpenAI and AWS Bedrock
+- Implemented prompt caching for faster scans
+- Added configurable reasoning effort levels
+- Introduced CVSS score calculation for findings
+
+### Improvements
+
+- Better GitHub repository cloning and analysis
+- Enhanced XSS detection with DOM analysis
+- Improved SQL injection testing with blind techniques
+- Better race condition detection
+
+### Bug Fixes
+
+- Fixed memory leaks in long-running scans
+- Resolved container cleanup issues
+- Fixed Unicode handling in reports
+
+## Version 0.7.0
+
+**Release Date:** November 2025
+
+### Features
+
+- Initial public release of Strix
+- Core vulnerability detection capabilities
+- Docker-based sandbox execution
+- Support for OpenAI and Anthropic models
+- Interactive terminal UI
+- HTML and JSON report generation
+
+### Supported Vulnerabilities
+
+- SQL Injection
+- Cross-Site Scripting (XSS)
+- Insecure Direct Object Reference (IDOR)
+- Server-Side Request Forgery (SSRF)
+- Authentication and Authorization flaws
+- Business logic vulnerabilities
+
+## Upcoming Features
+
+### Version 0.9.0 (Planned)
+
+- **Enhanced CI/CD Integration** - Native GitHub Actions and GitLab CI support
+- **Collaborative Testing** - Multi-user scan sessions
+- **Custom Skills API** - Programmatic skill creation
+- **Advanced Reporting** - PDF exports and compliance templates
+- **Improved Auto-Fix** - Better remediation suggestions
+
+### Version 1.0.0 (Planned)
+
+- **Stable API** - Public API for integrations
+- **Plugin System** - Third-party tool integrations
+- **Enterprise Features** - SSO, RBAC, audit logs
+- **Mobile App Testing** - iOS and Android support
+- **Cloud Provider Scans** - AWS, Azure, GCP security testing
+
+## Migration Guides
+
+### Upgrading to 0.8.x from 0.7.x
+
+**Breaking Changes:**
+- Configuration format changed in `~/.strix/cli-config.json`
+- Some CLI flags renamed for consistency
+- Docker image name changed to `usestrix/strix:latest`
+
+**Migration Steps:**
+
+1. **Update Strix**
+   ```bash
+   pip install --upgrade strix-agent
+   ```
+
+2. **Pull new Docker image**
+   ```bash
+   docker pull usestrix/strix:latest
+   ```
+
+3. **Update environment variables**
+   ```bash
+   # Old (0.7.x)
+   export STRIX_MODEL="gpt-4"
+
+   # New (0.8.x)
+   export STRIX_LLM="openai/gpt-5"
+   ```
+
+4. **Clear old configuration**
+   ```bash
+   rm ~/.strix/cli-config.json
+   # Run Strix once to regenerate
+   ```
+
+5. **Update CI/CD pipelines**
+   - Replace `--model` flag with `STRIX_LLM` environment variable
+   - Use new scan mode flags: `--scan-mode quick|standard|deep`
+
+## Release Schedule
+
+Strix follows a regular release cadence:
+
+- **Major releases** (x.0.0) - Quarterly, with breaking changes
+- **Minor releases** (0.x.0) - Monthly, with new features
+- **Patch releases** (0.0.x) - Weekly, with bug fixes
+
+## Support Policy
+
+- **Current version** (0.8.x) - Full support and updates
+- **Previous version** (0.7.x) - Security fixes only until May 2026
+- **Older versions** (< 0.7.x) - No longer supported
+
+## Contributing to Releases
+
+Help shape future releases:
+
+1. **Vote on features** - [GitHub Discussions](https://github.com/usestrix/strix/discussions)
+2. **Submit pull requests** - See [Contributing Guide](/resources/contributing)
+3. **Report bugs** - [GitHub Issues](https://github.com/usestrix/strix/issues)
+4. **Suggest improvements** - Join [Discord](https://discord.gg/strix-ai)
+
+## Stay Updated
+
+- **GitHub Releases** - [github.com/usestrix/strix/releases](https://github.com/usestrix/strix/releases)
+- **Discord Announcements** - [discord.gg/strix-ai](https://discord.gg/strix-ai)
+- **Twitter/X** - [@strix_ai](https://x.com/strix_ai)
+- **Documentation** - [docs.strix.ai](https://docs.strix.ai)

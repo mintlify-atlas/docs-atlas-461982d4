@@ -1,0 +1,348 @@
+---
+title: Scan Modes
+description: Choose the right scan mode for your security testing needs - quick, standard, or deep
+---
+
+Strix provides three scan modes optimized for different use cases and time constraints. Each mode balances thoroughness against execution time to fit your workflow.
+
+## Overview
+
+You specify the scan mode using the `--scan-mode` or `-m` flag:
+
+```bash
+strix --target https://your-app.com --scan-mode <mode>
+```
+
+**Available modes:**
+- `quick` - Fast CI/CD checks (5-15 minutes)
+- `standard` - Routine testing (30-60 minutes)
+- `deep` - Thorough security reviews (2-4 hours)
+
+<Note>
+The default scan mode is `deep`, which provides the most comprehensive security assessment.
+</Note>
+
+## Quick Mode
+
+**Best for:** CI/CD pipelines, rapid feedback, pre-commit checks
+
+```bash
+strix --target ./my-app --scan-mode quick
+```
+
+### Characteristics
+
+- **Duration:** 5-15 minutes
+- **Coverage:** Critical and high-severity vulnerabilities
+- **Depth:** Surface-level analysis with automated validation
+- **Agent behavior:** Focused on common attack patterns
+- **Reasoning effort:** Medium (optimized for speed)
+
+### What Quick Mode Tests
+
+<AccordionGroup>
+  <Accordion title="Authentication & Access Control">
+    - Authentication bypass attempts
+    - Basic privilege escalation checks
+    - Common IDOR patterns
+  </Accordion>
+
+  <Accordion title="Injection Vulnerabilities">
+    - SQL injection (common payloads)
+    - Command injection
+    - Basic XSS detection
+  </Accordion>
+
+  <Accordion title="Security Misconfigurations">
+    - Exposed sensitive endpoints
+    - Common security header issues
+    - Default credentials
+  </Accordion>
+
+  <Accordion title="Known Vulnerabilities">
+    - Dependency scanning
+    - Known CVEs in libraries
+    - Outdated component detection
+  </Accordion>
+</AccordionGroup>
+
+### Example: Quick CI/CD Check
+
+```bash
+strix -n --target ./app --scan-mode quick
+```
+
+**Terminal output:**
+```
+[STRIX]
+Scan mode: quick
+Target: ./app
+
+[12:34:56] Starting security assessment...
+[12:35:12] Found SQL injection in /api/users
+[12:35:45] Validating IDOR vulnerability...
+[12:36:20] CRITICAL: Authentication bypass confirmed
+
+Scan completed in 6m 34s
+Output: strix_runs/app-20260301-123456
+```
+
+<Warning>
+Quick mode is optimized for speed and may miss complex vulnerabilities that require deeper analysis. Use it for rapid feedback, but run standard or deep scans before production deployments.
+</Warning>
+
+## Standard Mode
+
+**Best for:** Regular development testing, staged environment validation, weekly security checks
+
+```bash
+strix --target https://staging.example.com --scan-mode standard
+```
+
+### Characteristics
+
+- **Duration:** 30-60 minutes
+- **Coverage:** All common vulnerability classes
+- **Depth:** Moderate analysis with thorough validation
+- **Agent behavior:** Explores multiple attack vectors
+- **Reasoning effort:** High (balanced approach)
+
+### What Standard Mode Tests
+
+Everything in Quick Mode, plus:
+
+<AccordionGroup>
+  <Accordion title="Business Logic Flaws">
+    - Race conditions
+    - Workflow manipulation
+    - Payment and transaction logic
+    - State management issues
+  </Accordion>
+
+  <Accordion title="Advanced Injection">
+    - NoSQL injection
+    - XML injection and XXE
+    - Template injection
+    - LDAP injection
+  </Accordion>
+
+  <Accordion title="Session Management">
+    - JWT vulnerabilities
+    - Session fixation
+    - Cookie security
+    - Token manipulation
+  </Accordion>
+
+  <Accordion title="Client-Side Security">
+    - DOM-based XSS
+    - Prototype pollution
+    - CSRF vulnerabilities
+    - Clickjacking
+  </Accordion>
+</AccordionGroup>
+
+### Example: Staging Environment Test
+
+```bash
+strix --target https://staging.example.com --scan-mode standard
+```
+
+**Terminal output:**
+```
+[STRIX]
+Scan mode: standard
+Target: https://staging.example.com
+
+[14:22:10] Mapping attack surface...
+[14:25:33] Testing authentication flows...
+[14:31:18] Found race condition in checkout process
+[14:42:55] Validating SSRF vulnerability...
+[14:58:02] Confirmed JWT algorithm confusion
+
+Scan completed in 47m 22s
+Vulnerabilities found: 8 (3 critical, 5 high)
+Output: strix_runs/staging-example-com-20260301-142210
+```
+
+## Deep Mode
+
+**Best for:** Pre-production security reviews, compliance requirements, comprehensive assessments
+
+```bash
+strix --target https://your-app.com --scan-mode deep
+```
+
+### Characteristics
+
+- **Duration:** 2-4 hours
+- **Coverage:** Comprehensive vulnerability detection
+- **Depth:** Exhaustive analysis with multi-stage validation
+- **Agent behavior:** Multi-agent collaboration, creative exploitation
+- **Reasoning effort:** High (maximum thoroughness)
+
+### What Deep Mode Tests
+
+Everything in Standard Mode, plus:
+
+<AccordionGroup>
+  <Accordion title="Advanced Server-Side Attacks">
+    - Server-Side Request Forgery (SSRF)
+    - Deserialization vulnerabilities
+    - File inclusion (LFI/RFI)
+    - Path traversal
+  </Accordion>
+
+  <Accordion title="Complex Business Logic">
+    - Multi-step workflow vulnerabilities
+    - Advanced race conditions
+    - Complex state manipulation
+    - Financial transaction security
+  </Accordion>
+
+  <Accordion title="Infrastructure Security">
+    - Container escape attempts
+    - Cloud misconfigurations
+    - Network segmentation issues
+    - Service exposure analysis
+  </Accordion>
+
+  <Accordion title="Chain Exploits">
+    - Multi-vulnerability chains
+    - Privilege escalation paths
+    - Cross-service attack vectors
+    - Defense bypass techniques
+  </Accordion>
+</AccordionGroup>
+
+### Example: Comprehensive Security Review
+
+```bash
+strix --target ./production-app --scan-mode deep
+```
+
+**Terminal output:**
+```
+[STRIX]
+Scan mode: deep
+Target: ./production-app
+
+[09:15:22] Starting comprehensive security assessment...
+[09:18:45] Attack surface mapping complete - 47 endpoints discovered
+[09:32:11] Testing authentication mechanisms...
+[09:51:33] Found potential deserialization vulnerability
+[10:15:28] Validating exploit chain: SSRF → Internal API access
+[10:42:17] Confirmed privilege escalation path
+[11:19:55] Testing business logic in payment flow...
+[12:03:44] Discovered race condition in withdrawal process
+[12:28:31] Validating all findings with proof-of-concepts...
+
+Scan completed in 3h 13m 09s
+Vulnerabilities found: 14 (5 critical, 6 high, 3 medium)
+Output: strix_runs/production-app-20260301-091522
+```
+
+<Note>
+Deep mode uses the highest reasoning effort and most thorough agent collaboration. This is the recommended mode for security reviews before production deployments.
+</Note>
+
+## Choosing the Right Mode
+
+<Steps>
+  <Step title="Identify your use case">
+    Consider your time constraints and security requirements:
+    
+    - **Need results in minutes?** Use quick mode
+    - **Regular development testing?** Use standard mode
+    - **Pre-production security review?** Use deep mode
+  </Step>
+
+  <Step title="Consider your environment">
+    Match the mode to your testing environment:
+    
+    - **CI/CD pipeline:** Quick mode
+    - **Staging environment:** Standard mode
+    - **Production-like environment:** Deep mode
+  </Step>
+
+  <Step title="Factor in coverage needs">
+    Determine how comprehensive you need the assessment:
+    
+    - **Critical vulnerabilities only:** Quick mode
+    - **Common vulnerability classes:** Standard mode
+    - **Exhaustive security testing:** Deep mode
+  </Step>
+</Steps>
+
+## Scan Mode Comparison
+
+| Feature | Quick | Standard | Deep |
+|---------|-------|----------|------|
+| Duration | 5-15 min | 30-60 min | 2-4 hours |
+| Coverage | Critical only | Common classes | Comprehensive |
+| Agent depth | Surface-level | Moderate | Exhaustive |
+| Best for | CI/CD | Development | Pre-production |
+| Reasoning | Medium | High | High |
+| Chain exploits | No | Limited | Yes |
+
+## CI/CD Integration Example
+
+Use quick mode in your GitHub Actions workflow:
+
+```yaml
+name: Security Scan
+
+on:
+  pull_request:
+
+jobs:
+  strix-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Install Strix
+        run: curl -sSL https://strix.ai/install | bash
+      
+      - name: Run Quick Security Scan
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: strix -n -t ./ --scan-mode quick
+```
+
+## Performance Tuning
+
+You can further optimize scan performance with environment variables:
+
+```bash
+# For quick scans, use medium reasoning effort
+export STRIX_REASONING_EFFORT="medium"
+strix --target ./app --scan-mode quick
+
+# For deep scans, use high reasoning effort (default)
+export STRIX_REASONING_EFFORT="high"
+strix --target ./app --scan-mode deep
+```
+
+**Available reasoning effort levels:**
+- `none` - Minimal reasoning (fastest)
+- `minimal` - Basic reasoning
+- `low` - Light reasoning
+- `medium` - Moderate reasoning (recommended for quick scans)
+- `high` - Thorough reasoning (default)
+- `xhigh` - Maximum reasoning (experimental)
+
+<Warning>
+Lower reasoning effort speeds up scans but may reduce vulnerability detection accuracy. Use with caution.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Custom Instructions" icon="message-lines" href="/usage/custom-instructions">
+    Guide Strix to focus on specific areas regardless of scan mode
+  </Card>
+  <Card title="Advanced Testing" icon="flask" href="/usage/advanced-testing">
+    Learn about authenticated testing and complex scenarios
+  </Card>
+</CardGroup>

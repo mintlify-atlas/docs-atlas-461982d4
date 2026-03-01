@@ -1,0 +1,589 @@
+---
+title: Custom Instructions
+description: Guide Strix to focus on specific vulnerabilities, testing approaches, and areas of interest
+---
+
+Custom instructions allow you to guide Strix's testing behavior, focus on specific vulnerability types, provide test credentials, or define particular areas of interest. This makes Strix highly adaptable to your specific security testing needs.
+
+## Overview
+
+You can provide custom instructions in two ways:
+
+<CodeGroup>
+```bash Inline instruction
+strix --target https://your-app.com --instruction "Focus on authentication vulnerabilities"
+```
+
+```bash Instruction file
+strix --target https://your-app.com --instruction-file ./instructions.txt
+```
+</CodeGroup>
+
+<Warning>
+You cannot use both `--instruction` and `--instruction-file` at the same time. Choose one method based on your needs.
+</Warning>
+
+## Inline Instructions
+
+Use the `--instruction` flag for short, focused guidance:
+
+```bash
+strix --target example.com --instruction "Focus on authentication vulnerabilities"
+```
+
+### When to Use Inline Instructions
+
+- Short, focused testing objectives
+- Single-line guidance
+- Quick testing adjustments
+- Simple scope definitions
+
+### Examples
+
+<CodeGroup>
+```bash Vulnerability focus
+strix --target https://api.example.com --instruction "Focus on IDOR and XSS vulnerabilities"
+```
+
+```bash Testing approach
+strix --target https://app.com --instruction "Perform thorough authentication testing"
+```
+
+```bash Specific endpoint
+strix --target https://api.example.com --instruction "Check /api/users endpoint for security issues"
+```
+
+```bash Test credentials
+strix --target https://app.com --instruction "Use credentials admin:password123 for authenticated testing"
+```
+</CodeGroup>
+
+## Instruction Files
+
+For complex, multi-line instructions, use the `--instruction-file` flag:
+
+```bash
+strix --target https://your-app.com --instruction-file ./detailed_instructions.md
+```
+
+### When to Use Instruction Files
+
+- Complex testing scenarios
+- Multiple test credentials
+- Detailed scope and exclusions
+- Rules of engagement
+- Compliance requirements
+- Reusable testing templates
+
+<Note>
+Instruction files can be in any text format (.txt, .md, etc.). Strix reads the entire file content as instructions.
+</Note>
+
+### Example: Basic Instruction File
+
+Create `instructions.txt`:
+
+```text
+Focus on the following areas:
+
+1. Authentication and session management
+2. API authorization checks (especially IDOR)
+3. Payment processing workflow
+
+Test credentials:
+- Regular user: user@example.com / password123
+- Admin user: admin@example.com / admin456
+
+Out of scope:
+- Third-party integrations
+- /health and /metrics endpoints
+```
+
+Run with:
+
+```bash
+strix --target https://api.example.com --instruction-file ./instructions.txt
+```
+
+### Example: Detailed Security Assessment
+
+Create `detailed_instructions.md`:
+
+```markdown
+# Security Assessment Instructions
+
+## Scope
+
+### In Scope
+- Authentication flows (login, logout, password reset)
+- User profile management (/api/users/*)
+- Payment processing (/api/payments/*)
+- Admin dashboard (/admin/*)
+
+### Out of Scope
+- Marketing website (*.marketing.example.com)
+- Analytics endpoints (/api/analytics/*)
+- Health check endpoints
+
+## Test Accounts
+
+### Regular User
+- Email: user@test.com
+- Password: TestPass123!
+- User ID: 12345
+
+### Premium User
+- Email: premium@test.com
+- Password: PremiumPass123!
+- User ID: 67890
+
+### Administrator
+- Email: admin@test.com
+- Password: AdminSecure456!
+- User ID: 1
+
+## Focus Areas
+
+1. **Access Control**
+   - Test horizontal privilege escalation (IDOR)
+   - Verify admin panel access restrictions
+   - Check user isolation in multi-tenant features
+
+2. **Business Logic**
+   - Payment flow race conditions
+   - Subscription upgrade/downgrade logic
+   - Referral credit manipulation
+
+3. **API Security**
+   - JWT token validation
+   - Rate limiting on sensitive endpoints
+   - Mass assignment vulnerabilities
+
+## Known Issues (Accepted Risk)
+
+- Missing CSP headers on legacy pages (ticket #1234)
+- Verbose error messages in /api/debug (dev environment only)
+
+## Compliance Requirements
+
+This assessment is part of our SOC 2 compliance. Please document:
+- All authentication bypass attempts
+- Any PII exposure
+- Encryption validation results
+```
+
+Run with:
+
+```bash
+strix --target https://api.example.com --instruction-file ./detailed_instructions.md
+```
+
+## Common Use Cases
+
+### Authenticated Testing
+
+Provide credentials for testing protected areas:
+
+<CodeGroup>
+```bash Inline credentials
+strix --target https://app.com \
+  --instruction "Use credentials user@test.com:password123 for authenticated testing"
+```
+
+```bash Multiple accounts
+strix --target https://app.com --instruction-file ./accounts.txt
+```
+</CodeGroup>
+
+**accounts.txt:**
+```text
+Test the following user accounts:
+
+1. Regular user: user@test.com / pass123
+2. Admin user: admin@test.com / admin456
+3. Limited user: limited@test.com / limited789
+
+Focus on privilege escalation between these roles.
+```
+
+### Vulnerability-Focused Testing
+
+Target specific vulnerability classes:
+
+<CodeGroup>
+```bash Single vulnerability type
+strix --target https://api.example.com --instruction "Focus exclusively on IDOR vulnerabilities"
+```
+
+```bash Multiple types
+strix --target https://api.example.com --instruction "Focus on IDOR, XSS, and authentication bypass"
+```
+
+```bash OWASP Top 10
+strix --target https://app.com --instruction-file ./owasp-top10.txt
+```
+</CodeGroup>
+
+**owasp-top10.txt:**
+```text
+Conduct testing focused on OWASP Top 10 2021:
+
+1. Broken Access Control
+2. Cryptographic Failures
+3. Injection
+4. Insecure Design
+5. Security Misconfiguration
+6. Vulnerable and Outdated Components
+7. Identification and Authentication Failures
+8. Software and Data Integrity Failures
+9. Security Logging and Monitoring Failures
+10. Server-Side Request Forgery
+
+Prioritize findings based on OWASP severity ratings.
+```
+
+### Business Logic Testing
+
+Focus on application-specific logic:
+
+```bash
+strix --target https://ecommerce.example.com --instruction-file ./business-logic.txt
+```
+
+**business-logic.txt:**
+```text
+Focus on business logic vulnerabilities in:
+
+1. Shopping cart manipulation
+   - Negative quantities
+   - Price tampering
+   - Discount code stacking
+
+2. Checkout process
+   - Race conditions in payment
+   - Inventory validation bypass
+   - Coupon reuse
+
+3. User account features
+   - Referral credit exploitation
+   - Loyalty points manipulation
+   - Account merging vulnerabilities
+
+Test credentials: shopper@test.com / ShopPass123!
+```
+
+### API Security Assessment
+
+Target API-specific vulnerabilities:
+
+```bash
+strix --target https://api.example.com --instruction-file ./api-security.md
+```
+
+**api-security.md:**
+```markdown
+# API Security Assessment
+
+## Focus Areas
+
+### Authentication & Authorization
+- JWT token validation and expiration
+- API key security and rotation
+- OAuth 2.0 flow vulnerabilities
+- Scope and permission enforcement
+
+### API-Specific Attacks
+- Mass assignment vulnerabilities
+- GraphQL query depth attacks
+- REST API parameter pollution
+- Rate limiting bypass
+
+### Data Validation
+- Input validation on all endpoints
+- SQL/NoSQL injection
+- XML/JSON injection
+- File upload vulnerabilities
+
+## Test API Keys
+
+- Read-only key: `ro_1234567890abcdef`
+- Full access key: `rw_abcdef1234567890`
+- Limited scope key: `ls_fedcba0987654321`
+
+## Critical Endpoints
+
+1. `/api/v2/users` - User management
+2. `/api/v2/payments` - Payment processing
+3. `/api/v2/admin` - Administrative functions
+```
+
+### Compliance-Driven Testing
+
+Align testing with compliance requirements:
+
+```bash
+strix --target https://healthcare-app.com --instruction-file ./hipaa-compliance.txt
+```
+
+**hipaa-compliance.txt:**
+```text
+HIPAA Compliance Security Assessment
+
+## Required Testing
+
+1. Access Controls (§164.312(a)(1))
+   - Unique user identification
+   - Emergency access procedures
+   - Automatic logoff
+   - Encryption and decryption
+
+2. Audit Controls (§164.312(b))
+   - Logging of PHI access
+   - Audit trail completeness
+   - Log tampering resistance
+
+3. Integrity (§164.312(c)(1))
+   - Data integrity verification
+   - Electronic signature validation
+
+4. Transmission Security (§164.312(e)(1))
+   - Encryption in transit
+   - Integrity controls
+
+## PHI Exposure Testing
+
+Verify that Protected Health Information is not exposed:
+- In error messages
+- In logs
+- In URLs or query parameters
+- Through unauthorized API access
+
+Test account (synthetic data): patient@test.com / Patient123!
+```
+
+## Best Practices
+
+<Steps>
+  <Step title="Be specific">
+    Provide clear, actionable guidance:
+    
+    **Good:** "Focus on IDOR vulnerabilities in the /api/users endpoint"
+    
+    **Bad:** "Test the API"
+  </Step>
+
+  <Step title="Include credentials">
+    Provide test accounts when testing authenticated features:
+    
+    ```text
+    Test credentials:
+    - Regular user: user@test.com / pass123
+    - Admin user: admin@test.com / admin456
+    ```
+  </Step>
+
+  <Step title="Define scope">
+    Clearly specify what's in and out of scope:
+    
+    ```text
+    In scope:
+    - /api/v2/* endpoints
+    - User authentication flows
+    
+    Out of scope:
+    - Third-party integrations
+    - /health endpoints
+    ```
+  </Step>
+
+  <Step title="Prioritize">
+    Indicate what matters most:
+    
+    ```text
+    Priority areas:
+    1. Payment processing (critical)
+    2. User authentication (high)
+    3. Admin features (medium)
+    ```
+  </Step>
+</Steps>
+
+## Instruction File Templates
+
+### General Web Application
+
+```text
+Security Assessment Instructions
+
+## Test Accounts
+- User: user@test.com / pass123
+- Admin: admin@test.com / admin456
+
+## Focus Areas
+1. Authentication and authorization
+2. Input validation
+3. Business logic flaws
+
+## Out of Scope
+- Third-party services
+- Health check endpoints
+```
+
+### API Assessment
+
+```text
+API Security Assessment
+
+## API Keys
+- Read: ro_key123
+- Write: rw_key456
+
+## Critical Endpoints
+1. /api/users - User management
+2. /api/payments - Payment processing
+
+## Focus
+- Authentication bypass
+- IDOR vulnerabilities
+- Rate limiting
+```
+
+### Penetration Test
+
+```text
+Penetration Test - Rules of Engagement
+
+## Authorized Scope
+- *.example.com
+- 192.168.1.0/24
+
+## Unauthorized
+- *.production.example.com
+- Any destructive testing
+
+## Credentials
+- Test user: pentest@example.com / PenTest123!
+
+## Reporting
+Document all findings with:
+- Steps to reproduce
+- Proof of concept
+- Business impact
+```
+
+## Example: Complete Workflow
+
+<Steps>
+  <Step title="Create instruction file">
+    Create `webapp-test.md` with your testing requirements:
+    
+    ```markdown
+    # E-commerce Security Test
+    
+    ## Accounts
+    - Customer: buyer@test.com / BuyPass123!
+    - Seller: seller@test.com / SellPass123!
+    
+    ## Focus
+    1. Payment flow race conditions
+    2. IDOR in order management
+    3. XSS in product reviews
+    
+    ## Out of Scope
+    - Marketing pages
+    - Blog section
+    ```
+  </Step>
+
+  <Step title="Run Strix with instructions">
+    ```bash
+    strix --target https://shop.example.com \
+      --instruction-file ./webapp-test.md \
+      --scan-mode deep
+    ```
+  </Step>
+
+  <Step title="Review results">
+    Strix follows your instructions and focuses on the specified areas:
+    
+    ```
+    [10:15:22] Starting security assessment...
+    [10:15:45] Using provided test credentials
+    [10:16:12] Testing payment flow for race conditions...
+    [10:23:55] Found race condition in checkout process
+    [10:35:18] Testing IDOR in order management...
+    [10:42:33] Confirmed IDOR vulnerability in /api/orders
+    ```
+  </Step>
+</Steps>
+
+## Tips and Tricks
+
+### Reusable Templates
+
+Create reusable instruction files for common scenarios:
+
+```bash
+# Keep a library of templates
+mkdir ~/strix-instructions
+
+# Create templates
+echo "..." > ~/strix-instructions/api-security.txt
+echo "..." > ~/strix-instructions/web-app.txt
+echo "..." > ~/strix-instructions/compliance.txt
+
+# Use them in tests
+strix --target https://api.example.com \
+  --instruction-file ~/strix-instructions/api-security.txt
+```
+
+### Combining with Other Flags
+
+Instructions work with all Strix features:
+
+<CodeGroup>
+```bash With scan mode
+strix -t https://app.com \
+  --instruction-file ./instructions.txt \
+  --scan-mode deep
+```
+
+```bash Multi-target with instructions
+strix -t https://github.com/org/repo \
+  -t https://staging.example.com \
+  --instruction "Focus on authentication in both code and deployed app"
+```
+
+```bash Non-interactive with instructions
+strix -n -t https://api.com \
+  --instruction-file ./api-test.txt \
+  --scan-mode quick
+```
+</CodeGroup>
+
+### Validation
+
+Strix validates instruction files before starting:
+
+```bash
+strix --target https://app.com --instruction-file ./empty.txt
+# Error: Instruction file './empty.txt' is empty
+
+strix --target https://app.com --instruction-file ./missing.txt
+# Error: Failed to read instruction file './missing.txt': No such file
+```
+
+<Warning>
+Do not specify both `--instruction` and `--instruction-file`. Strix will exit with an error if you try to use both.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Multi-Target Testing" icon="bullseye-arrow" href="/usage/multi-target-testing">
+    Combine custom instructions with multi-target scans
+  </Card>
+  <Card title="Advanced Testing" icon="flask" href="/usage/advanced-testing">
+    Learn about grey-box and white-box testing strategies
+  </Card>
+</CardGroup>

@@ -1,0 +1,463 @@
+---
+title: Agents
+description: Understanding Strix's autonomous security testing agents
+---
+
+Agents are the core intelligence layer of Strix. Each agent is an AI-powered security expert that can reason about applications, execute tests, and discover vulnerabilities autonomously.
+
+## Agent Architecture
+
+Strix agents are built on the `BaseAgent` class, which provides:
+
+- **LLM integration** for reasoning and decision-making
+- **Tool execution** capabilities for interacting with targets
+- **State management** to track progress and context
+- **Multi-agent coordination** for complex testing scenarios
+
+```python
+# From strix/agents/base_agent.py
+class BaseAgent(metaclass=AgentMeta):
+    max_iterations = 300
+    agent_name: str = ""
+    jinja_env: Environment
+    default_llm_config: LLMConfig | None = None
+    
+    def __init__(self, config: dict[str, Any]):
+        self.state = AgentState(
+            agent_name="Root Agent",
+            max_iterations=self.max_iterations,
+        )
+        self.llm = LLM(self.llm_config, agent_name=self.agent_name)
+```
+
+## Agent Types
+
+### Root Agent
+
+The root agent is created when you start a scan. It:
+
+- Receives the initial scan configuration (targets, instructions)
+- Coordinates the overall testing strategy
+- Creates specialized sub-agents for complex tasks
+- Aggregates findings into the final report
+
+```python
+# From strix/agents/StrixAgent/strix_agent.py
+class StrixAgent(BaseAgent):
+    max_iterations = 300
+    
+    def __init__(self, config: dict[str, Any]):
+        # Root agents get the "root_agent" skill by default
+        default_skills = []
+        state = config.get("state")
+        if state is None or state.parent_id is None:
+            default_skills = ["root_agent"]
+        
+        self.default_llm_config = LLMConfig(skills=default_skills)
+        super().__init__(config)
+```
+
+<Note>
+Root agents automatically load the `root_agent` skill, which contains high-level testing strategies and coordination patterns.
+</Note>
+
+### Sub-Agents
+
+Sub-agents are created by the root agent (or other sub-agents) for specialized tasks:
+
+```python
+# Creating a sub-agent for authentication testing
+create_agent(
+    task="Test JWT authentication mechanisms and token validation",
+    name="JWT Authentication Specialist",
+    skills="authentication_jwt,business_logic",
+    inherit_messages=False  # Fresh context for focused testing
+)
+```
+
+Sub-agents:
+- Have specialized skills for their domain
+- Operate independently with their own conversation context
+- Share the sandbox workspace and proxy history
+- Report findings back to their parent agent
+
+<Warning>
+Sub-agents are **not** continuations of their parent. They receive a specific task and work independently, even if they inherit conversation history for background context.
+</Warning>
+
+## Agent Lifecycle
+
+### 1. Creation
+
+When an agent is created:
+
+```python
+# From strix/agents/base_agent.py
+def __init__(self, config: dict[str, Any]):
+    self.state = AgentState(
+        agent_name="Root Agent",
+        max_iterations=self.max_iterations,
+    )
+    
+    # Register agent in the graph
+    self._add_to_agents_graph()
+    
+    # Log creation to telemetry
+    tracer.log_agent_creation(
+        agent_id=self.state.agent_id,
+        name=self.state.agent_name,
+        task=self.state.task,
+        parent_id=self.state.parent_id,
+    )
+```
+
+The agent is added to the global agent graph for tracking and coordination.
+
+### 2. Execution Loop
+
+The agent enters its main reasoning loop:
+
+```python
+# From strix/agents/base_agent.py
+async def agent_loop(self, task: str) -> dict[str, Any]:
+    # Initialize sandbox and add task to messages
+    await self._initialize_sandbox_and_state(task)
+    
+    while True:
+        # Check for messages from other agents or user
+        self._check_agent_messages(self.state)
+        
+        # Handle waiting state (paused or awaiting input)
+        if self.state.is_waiting_for_input():
+            await self._wait_for_input()
+            continue
+        
+        # Check if task is complete
+        if self.state.should_stop():
+            return self.state.final_result or {}
+        
+        # Increment iteration counter
+        self.state.increment_iteration()
+        
+        # Send conversation to LLM and process response
+        should_finish = await self._process_iteration(tracer)
+        
+        if should_finish:
+            return self.state.final_result or {}
+```
+
+<AccordionGroup>
+  <Accordion title="Iteration Processing">
+    Each iteration:
+    
+    1. **Sends conversation history** to the LLM
+    2. **Receives response** (text + tool invocations)
+    3. **Executes requested tools** (terminal, browser, file operations)
+    4. **Adds results to conversation** for next iteration
+    
+    ```python
+    async def _process_iteration(self, tracer) -> bool:
+        # Stream response from LLM
+        async for response in self.llm.generate(
+            self.state.get_conversation_history()
+        ):
+            final_response = response
+        
+        # Add assistant message to history
+        self.state.add_message("assistant", final_response.content)
+        
+        # Execute any tool invocations
+        if final_response.tool_invocations:
+            return await self._execute_actions(
+                final_response.tool_invocations,
+                tracer
+            )
+    ```
+  </Accordion>
+  
+  <Accordion title="State Management">
+    Agent state persists across iterations:
+    
+    ```python
+    # From strix/agents/state.py
+    class AgentState(BaseModel):
+        agent_id: str  # Unique identifier (agent_abc123)
+        agent_name: str  # Human-readable name
+        parent_id: str | None  # Parent agent if this is a sub-agent
+        
+        task: str  # Current task description
+        iteration: int  # Current loop iteration
+        max_iterations: int  # Safety limit
+        
+        messages: list[dict[str, Any]]  # Conversation with LLM
+        actions_taken: list[dict[str, Any]]  # Tools executed
+        errors: list[str]  # Failures encountered
+        
+        sandbox_id: str | None  # Associated sandbox
+        context: dict[str, Any]  # Custom storage
+    ```
+  </Accordion>
+  
+  <Accordion title="Error Handling">
+    Agents handle various failure scenarios:
+    
+    - **Tool execution failures**: Retry or adapt strategy
+    - **LLM errors**: Enter waiting state for user intervention
+    - **Iteration limit**: Force completion with current findings
+    - **Sandbox failures**: Report error and halt execution
+    
+    ```python
+    try:
+        should_finish = await self._process_iteration(tracer)
+    except LLMRequestFailedError as e:
+        self.state.enter_waiting_state(llm_failed=True)
+        self.state.add_error(str(e))
+    except RuntimeError as e:
+        await self._handle_iteration_error(e, tracer)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### 3. Completion
+
+Agents complete when they:
+
+- Call the `agent_finish` tool (sub-agents)
+- Call the `finish_scan` tool (root agent)
+- Reach the maximum iteration limit
+- Encounter an unrecoverable error
+
+```python
+# Sub-agent finishing
+agent_finish(
+    result="Discovered JWT algorithm confusion vulnerability",
+    success=True
+)
+
+# Root agent finishing
+finish_scan(
+    summary="Completed security assessment",
+    total_findings=5
+)
+```
+
+## Agent Graph
+
+Strix maintains a graph of all active agents for coordination:
+
+```python
+# From strix/tools/agents_graph/agents_graph_actions.py
+_agent_graph: dict[str, Any] = {
+    "nodes": {},  # agent_id -> agent info
+    "edges": [],  # parent-child relationships
+}
+
+# Each node contains:
+node = {
+    "id": "agent_abc123",
+    "name": "JWT Specialist",
+    "task": "Test authentication",
+    "status": "running",  # running | completed | error | waiting
+    "parent_id": "agent_xyz789",
+    "created_at": "2026-03-01T10:30:00Z",
+    "result": None,
+}
+```
+
+You can visualize the agent graph during execution:
+
+```bash
+strix scan --target https://api.example.com --show-graph
+```
+
+## Inter-Agent Communication
+
+Agents communicate through structured messages:
+
+```python
+# From strix/tools/agents_graph/agents_graph_actions.py
+@register_tool
+def send_message_to_agent(
+    recipient_agent_id: str,
+    message: str,
+    message_type: str = "information",  # information | question | instruction
+    priority: str = "normal",  # low | normal | high | urgent
+) -> dict[str, Any]:
+    # Add message to recipient's queue
+    _agent_messages[recipient_agent_id].append({
+        "from": sender_agent_id,
+        "content": message,
+        "message_type": message_type,
+        "priority": priority,
+        "read": False,
+    })
+```
+
+Messages are delivered as structured XML in the conversation:
+
+```xml
+<inter_agent_message>
+  <delivery_notice>
+    <important>You have received a message from another agent.</important>
+  </delivery_notice>
+  <sender>
+    <agent_name>API Testing Agent</agent_name>
+    <agent_id>agent_abc123</agent_id>
+  </sender>
+  <message_metadata>
+    <type>information</type>
+    <priority>high</priority>
+  </message_metadata>
+  <content>
+    Discovered admin API at /api/v2/admin with weak authentication.
+    Endpoint returns full user database when accessed with X-Admin: true header.
+  </content>
+</inter_agent_message>
+```
+
+## Agent Configuration
+
+### LLM Selection
+
+You can configure which LLM model agents use:
+
+```bash
+strix scan --target https://app.com --llm claude-4-sonnet
+```
+
+Supported models:
+- `claude-4-sonnet` (default, best reasoning)
+- `gpt-4o` (fast, good tool use)
+- `gemini-2.0-flash` (multimodal, fast)
+- `openrouter/anthropic/claude-3.5-sonnet`
+
+### Skills Selection
+
+Agents load up to 5 skills relevant to their task:
+
+```python
+create_agent(
+    task="Test OAuth2 implementation for authorization bypasses",
+    name="OAuth Security Specialist",
+    skills="authentication_jwt,broken_function_level_authorization,business_logic"
+)
+```
+
+See the [Skills documentation](/concepts/skills) for available skills.
+
+### Iteration Limits
+
+Control how long agents run:
+
+```bash
+strix scan --target https://app.com --max-iterations 500
+```
+
+<Info>
+Default is 300 iterations. Root agents and sub-agents share this limit unless overridden.
+</Info>
+
+## Best Practices
+
+### When to Create Sub-Agents
+
+Create sub-agents for:
+
+✅ **Specialized testing** (e.g., "Test all GraphQL operations for IDOR")
+✅ **Parallel work** (e.g., multiple endpoints simultaneously)
+✅ **Deep dives** (e.g., "Analyze authentication flow end-to-end")
+
+Avoid sub-agents for:
+
+❌ Simple one-off tool calls
+❌ Sequential tasks that don't need isolation
+❌ When iteration budget is low
+
+### Context Management
+
+Use `inherit_messages=True` sparingly:
+
+```python
+# Good: Focused sub-agent without context bloat
+create_agent(
+    task="Fuzz the /upload endpoint for path traversal",
+    name="Upload Fuzzer",
+    skills="path_traversal_lfi_rfi",
+    inherit_messages=False
+)
+
+# Use inheritance only when sub-agent needs parent's discoveries
+create_agent(
+    task="Continue testing authenticated endpoints",
+    name="Authenticated Tester",
+    skills="broken_function_level_authorization",
+    inherit_messages=True  # Needs auth tokens from parent
+)
+```
+
+### Error Recovery
+
+Agents automatically handle many errors, but you can intervene:
+
+```bash
+# During execution, press Ctrl+C to pause
+# Agent enters waiting state
+
+# Send message to agent
+strix message agent_abc123 "Try using the staging credentials instead"
+
+# Resume execution
+strix resume agent_abc123
+```
+
+## Advanced Features
+
+### Custom Agent Types
+
+You can extend `BaseAgent` for specialized behaviors:
+
+```python
+from strix.agents import BaseAgent
+
+class CustomSecurityAgent(BaseAgent):
+    max_iterations = 500
+    
+    def __init__(self, config):
+        # Load custom skills or tools
+        self.default_llm_config = LLMConfig(
+            skills=["custom_skill"],
+            system_prompt_override="You are a specialized agent..."
+        )
+        super().__init__(config)
+```
+
+### Agent Debugging
+
+Enable verbose logging:
+
+```bash
+strix scan --target https://app.com --verbose --log-level debug
+```
+
+This logs:
+- Every LLM request/response
+- Tool executions and results
+- State changes and errors
+- Inter-agent messages
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Tools" icon="wrench" href="/concepts/tools">
+    Explore tools available to agents
+  </Card>
+  <Card title="Skills" icon="book" href="/concepts/skills">
+    Learn about the skills system
+  </Card>
+  <Card title="How It Works" icon="diagram-project" href="/concepts/how-it-works">
+    Understand the full architecture
+  </Card>
+  <Card title="Vulnerability Detection" icon="bug" href="/concepts/vulnerability-detection">
+    See how agents find security issues
+  </Card>
+</CardGroup>

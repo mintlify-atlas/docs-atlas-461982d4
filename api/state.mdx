@@ -1,0 +1,596 @@
+---
+title: 'State API'
+description: 'Manage agent state and conversation history'
+icon: 'database'
+---
+
+## Overview
+
+The State API provides the `AgentState` class for managing agent execution state, conversation history, and context. Each agent maintains its own state throughout its lifecycle.
+
+## AgentState
+
+Manages the complete state of an agent including messages, iteration count, and execution metadata.
+
+### Constructor
+
+```python
+from strix.agents.state import AgentState
+
+state = AgentState(
+    agent_name: str = "Strix Agent",
+    max_iterations: int = 300
+)
+```
+
+<ParamField path="agent_name" type="str" default="'Strix Agent'">
+  Human-readable name for the agent
+</ParamField>
+
+<ParamField path="max_iterations" type="int" default="300">
+  Maximum number of iterations allowed before stopping
+</ParamField>
+
+**Example:**
+```python
+from strix.agents.state import AgentState
+
+state = AgentState(
+    agent_name="WebScanner",
+    max_iterations=100
+)
+print(f"Agent ID: {state.agent_id}")
+```
+
+## Properties
+
+### Identity
+
+<ResponseField name="agent_id" type="str">
+  Unique identifier auto-generated as "agent_" + 8 random hex characters
+</ResponseField>
+
+<ResponseField name="agent_name" type="str" default="'Strix Agent'">
+  Agent display name
+</ResponseField>
+
+<ResponseField name="parent_id" type="str | None" default="None">
+  Parent agent ID if this is a sub-agent
+</ResponseField>
+
+### Sandbox Information
+
+<ResponseField name="sandbox_id" type="str | None" default="None">
+  Docker container ID for the sandbox environment
+</ResponseField>
+
+<ResponseField name="sandbox_token" type="str | None" default="None">
+  Authentication token for sandbox API
+</ResponseField>
+
+<ResponseField name="sandbox_info" type="dict[str, Any] | None" default="None">
+  Complete sandbox information including ports and URLs
+</ResponseField>
+
+### Execution State
+
+<ResponseField name="task" type="str" default="''">
+  Current task description
+</ResponseField>
+
+<ResponseField name="iteration" type="int" default="0">
+  Current iteration number
+</ResponseField>
+
+<ResponseField name="max_iterations" type="int" default="300">
+  Maximum iterations allowed
+</ResponseField>
+
+<ResponseField name="completed" type="bool" default="False">
+  Whether execution is completed
+</ResponseField>
+
+<ResponseField name="stop_requested" type="bool" default="False">
+  Whether stop has been requested
+</ResponseField>
+
+<ResponseField name="waiting_for_input" type="bool" default="False">
+  Whether agent is waiting for input
+</ResponseField>
+
+<ResponseField name="llm_failed" type="bool" default="False">
+  Whether LLM requests are failing
+</ResponseField>
+
+<ResponseField name="final_result" type="dict[str, Any] | None" default="None">
+  Final result when completed
+</ResponseField>
+
+### Data Storage
+
+<ResponseField name="messages" type="list[dict[str, Any]]" default="[]">
+  Conversation history (role, content, thinking_blocks)
+</ResponseField>
+
+<ResponseField name="context" type="dict[str, Any]" default="{}">
+  Additional context storage
+</ResponseField>
+
+<ResponseField name="actions_taken" type="list[dict[str, Any]]" default="[]">
+  Record of all actions taken with timestamps
+</ResponseField>
+
+<ResponseField name="observations" type="list[dict[str, Any]]" default="[]">
+  Observations recorded during execution
+</ResponseField>
+
+<ResponseField name="errors" type="list[str]" default="[]">
+  Error messages
+</ResponseField>
+
+### Timestamps
+
+<ResponseField name="start_time" type="str">
+  ISO 8601 timestamp when state was created
+</ResponseField>
+
+<ResponseField name="last_updated" type="str">
+  ISO 8601 timestamp of last update
+</ResponseField>
+
+<ResponseField name="waiting_start_time" type="datetime | None" default="None">
+  When agent entered waiting state
+</ResponseField>
+
+## Methods
+
+### Message Management
+
+#### add_message
+
+```python
+def add_message(
+    role: str,
+    content: Any,
+    thinking_blocks: list[dict[str, Any]] | None = None
+) -> None
+```
+
+Adds a message to the conversation history.
+
+<ParamField path="role" type="str" required>
+  Message role: "user" or "assistant"
+</ParamField>
+
+<ParamField path="content" type="Any" required>
+  Message content (string or structured content)
+</ParamField>
+
+<ParamField path="thinking_blocks" type="list[dict[str, Any]] | None">
+  Optional thinking blocks from reasoning models
+</ParamField>
+
+**Example:**
+```python
+state.add_message("user", "Scan example.com for SQL injection")
+state.add_message("assistant", "I'll start by checking the login form...")
+```
+
+#### get_conversation_history
+
+```python
+def get_conversation_history() -> list[dict[str, Any]]
+```
+
+Returns the full conversation history.
+
+<ResponseField name="return" type="list[dict[str, Any]]">
+  List of message dictionaries
+</ResponseField>
+
+**Example:**
+```python
+history = state.get_conversation_history()
+for msg in history:
+    print(f"{msg['role']}: {msg['content'][:50]}...")
+```
+
+### Iteration Management
+
+#### increment_iteration
+
+```python
+def increment_iteration() -> None
+```
+
+Increments the iteration counter and updates timestamp.
+
+**Example:**
+```python
+state.increment_iteration()
+print(f"Now at iteration {state.iteration}/{state.max_iterations}")
+```
+
+#### has_reached_max_iterations
+
+```python
+def has_reached_max_iterations() -> bool
+```
+
+Checks if max iterations reached.
+
+<ResponseField name="return" type="bool">
+  True if iteration >= max_iterations
+</ResponseField>
+
+#### is_approaching_max_iterations
+
+```python
+def is_approaching_max_iterations(
+    threshold: float = 0.85
+) -> bool
+```
+
+Checks if approaching max iterations.
+
+<ParamField path="threshold" type="float" default="0.85">
+  Percentage threshold (0.0 to 1.0)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True if past threshold
+</ResponseField>
+
+**Example:**
+```python
+if state.is_approaching_max_iterations():
+    print("WARNING: Approaching max iterations")
+
+if state.has_reached_max_iterations():
+    print("ERROR: Max iterations reached")
+    state.set_completed({"success": False, "reason": "max_iterations"})
+```
+
+### Execution Control
+
+#### set_completed
+
+```python
+def set_completed(
+    final_result: dict[str, Any] | None = None
+) -> None
+```
+
+Marks the agent as completed.
+
+<ParamField path="final_result" type="dict[str, Any] | None">
+  Final result data
+</ParamField>
+
+**Example:**
+```python
+state.set_completed({
+    "success": True,
+    "vulnerabilities_found": 3,
+    "severity": "medium"
+})
+```
+
+#### request_stop
+
+```python
+def request_stop() -> None
+```
+
+Requests the agent to stop execution.
+
+**Example:**
+```python
+state.request_stop()
+```
+
+#### should_stop
+
+```python
+def should_stop() -> bool
+```
+
+Checks if agent should stop.
+
+<ResponseField name="return" type="bool">
+  True if stop_requested, completed, or max iterations reached
+</ResponseField>
+
+### Waiting State
+
+#### enter_waiting_state
+
+```python
+def enter_waiting_state(
+    llm_failed: bool = False
+) -> None
+```
+
+Puts agent into waiting state.
+
+<ParamField path="llm_failed" type="bool" default="False">
+  Whether entering wait due to LLM failure
+</ParamField>
+
+#### resume_from_waiting
+
+```python
+def resume_from_waiting(
+    new_task: str | None = None
+) -> None
+```
+
+Resumes from waiting state.
+
+<ParamField path="new_task" type="str | None">
+  Optional new task to set
+</ParamField>
+
+**Example:**
+```python
+# Enter waiting state
+state.enter_waiting_state()
+
+# Later, resume
+state.resume_from_waiting(new_task="Continue scanning subdomains")
+```
+
+#### is_waiting_for_input
+
+```python
+def is_waiting_for_input() -> bool
+```
+
+Checks if agent is waiting for input.
+
+<ResponseField name="return" type="bool">
+  True if waiting
+</ResponseField>
+
+#### has_waiting_timeout
+
+```python
+def has_waiting_timeout() -> bool
+```
+
+Checks if waiting timeout (600 seconds) has been reached.
+
+<ResponseField name="return" type="bool">
+  True if timeout reached
+</ResponseField>
+
+### Data Recording
+
+#### add_action
+
+```python
+def add_action(
+    action: dict[str, Any]
+) -> None
+```
+
+Records an action taken.
+
+<ParamField path="action" type="dict[str, Any]" required>
+  Action data to record
+</ParamField>
+
+**Example:**
+```python
+state.add_action({
+    "tool": "terminal_execute",
+    "command": "nmap -p 80,443 example.com"
+})
+```
+
+#### add_observation
+
+```python
+def add_observation(
+    observation: dict[str, Any]
+) -> None
+```
+
+Records an observation.
+
+<ParamField path="observation" type="dict[str, Any]" required>
+  Observation data
+</ParamField>
+
+**Example:**
+```python
+state.add_observation({
+    "type": "open_port",
+    "port": 443,
+    "service": "https"
+})
+```
+
+#### add_error
+
+```python
+def add_error(
+    error: str
+) -> None
+```
+
+Records an error message.
+
+<ParamField path="error" type="str" required>
+  Error message
+</ParamField>
+
+**Example:**
+```python
+state.add_error("Connection timeout to target server")
+```
+
+### Context Management
+
+#### update_context
+
+```python
+def update_context(
+    key: str,
+    value: Any
+) -> None
+```
+
+Updates context storage.
+
+<ParamField path="key" type="str" required>
+  Context key
+</ParamField>
+
+<ParamField path="value" type="Any" required>
+  Context value
+</ParamField>
+
+**Example:**
+```python
+state.update_context("target_url", "https://example.com")
+state.update_context("auth_token", "bearer_xyz123")
+state.update_context("findings", [])
+
+# Later
+findings = state.context.get("findings", [])
+findings.append({"type": "xss", "location": "/search"})
+state.update_context("findings", findings)
+```
+
+### Summary
+
+#### get_execution_summary
+
+```python
+def get_execution_summary() -> dict[str, Any]
+```
+
+Returns a comprehensive execution summary.
+
+<ResponseField name="return" type="dict[str, Any]">
+  Dictionary containing:
+  - agent_id, agent_name, parent_id
+  - sandbox_id, sandbox_info
+  - task, iteration, max_iterations
+  - completed, final_result
+  - start_time, last_updated
+  - total_actions, total_observations, total_errors
+  - has_errors, max_iterations_reached
+</ResponseField>
+
+**Example:**
+```python
+summary = state.get_execution_summary()
+print(f"Agent: {summary['agent_name']}")
+print(f"Iterations: {summary['iteration']}/{summary['max_iterations']}")
+print(f"Actions taken: {summary['total_actions']}")
+print(f"Errors: {summary['total_errors']}")
+print(f"Completed: {summary['completed']}")
+```
+
+#### has_empty_last_messages
+
+```python
+def has_empty_last_messages(
+    count: int = 3
+) -> bool
+```
+
+Checks if last N messages are empty.
+
+<ParamField path="count" type="int" default="3">
+  Number of messages to check
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True if last N messages are empty
+</ResponseField>
+
+## Complete Example
+
+```python
+import asyncio
+from strix.agents.state import AgentState
+from strix.tools import execute_tool
+
+async def scan_target():
+    # Create state
+    state = AgentState(
+        agent_name="SecurityScanner",
+        max_iterations=50
+    )
+    
+    # Set task
+    state.task = "Scan example.com for vulnerabilities"
+    state.add_message("user", state.task)
+    
+    # Set context
+    state.update_context("target", "example.com")
+    state.update_context("findings", [])
+    
+    # Execution loop
+    while not state.should_stop():
+        state.increment_iteration()
+        
+        # Check iteration limits
+        if state.is_approaching_max_iterations():
+            print("WARNING: Approaching max iterations")
+        
+        if state.has_reached_max_iterations():
+            state.set_completed({
+                "success": False,
+                "reason": "max_iterations"
+            })
+            break
+        
+        # Execute some action
+        state.add_message("assistant", "Running port scan...")
+        
+        try:
+            result = await execute_tool(
+                "terminal_execute",
+                agent_state=state,
+                command="echo 'Scanning ports...'"
+            )
+            
+            state.add_action({
+                "tool": "terminal_execute",
+                "command": "port_scan"
+            })
+            
+            state.add_observation({
+                "scan_result": result
+            })
+            
+        except Exception as e:
+            state.add_error(str(e))
+            state.request_stop()
+            break
+        
+        # Simulate completion after a few iterations
+        if state.iteration >= 3:
+            findings = state.context.get("findings", [])
+            state.set_completed({
+                "success": True,
+                "vulnerabilities": len(findings)
+            })
+    
+    # Get summary
+    summary = state.get_execution_summary()
+    print(f"\nExecution Summary:")
+    print(f"  Agent: {summary['agent_name']}")
+    print(f"  Iterations: {summary['iteration']}")
+    print(f"  Actions: {summary['total_actions']}")
+    print(f"  Errors: {summary['total_errors']}")
+    print(f"  Completed: {summary['completed']}")
+    print(f"  Result: {state.final_result}")
+
+if __name__ == "__main__":
+    asyncio.run(scan_target())
+```

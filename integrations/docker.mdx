@@ -1,0 +1,390 @@
+---
+title: Docker Integration
+description: Understand how Strix uses Docker containers for isolated security testing and how to configure the sandbox environment
+---
+
+Strix uses Docker containers to provide an isolated, reproducible security testing environment. The sandbox container comes pre-configured with a comprehensive suite of penetration testing tools and capabilities.
+
+## Overview
+
+The Strix sandbox is a Kali Linux-based Docker container that provides:
+
+- **Isolated Testing Environment** - Secure sandbox for running exploits and tests
+- **Pre-installed Security Tools** - Comprehensive toolkit including nmap, nuclei, sqlmap, and more
+- **HTTP Proxy Integration** - Built-in Caido proxy for request/response manipulation
+- **Browser Automation** - Chromium browser for testing XSS, CSRF, and auth flows
+- **Python Runtime** - Custom exploit development and validation
+- **Multi-architecture Support** - Works on x86_64 and ARM64 (Apple Silicon)
+
+## Prerequisites
+
+<Steps>
+  <Step title="Install Docker">
+    Ensure Docker is installed and running on your system:
+    
+    ```bash
+    docker --version
+    ```
+    
+    Download Docker from [docker.com](https://www.docker.com/get-started) if needed.
+  </Step>
+  
+  <Step title="Verify Docker is running">
+    Check that the Docker daemon is active:
+    
+    ```bash
+    docker ps
+    ```
+  </Step>
+  
+  <Step title="Ensure sufficient resources">
+    Allocate adequate resources to Docker:
+    
+    - **Memory**: At least 4GB RAM
+    - **Disk**: At least 10GB free space
+    - **CPU**: 2+ cores recommended
+  </Step>
+</Steps>
+
+## Automatic Image Management
+
+Strix automatically manages the Docker sandbox image:
+
+```bash
+# First run automatically pulls the image
+strix --target ./app-directory
+```
+
+<Note>
+The sandbox image is pulled automatically on first run. This may take a few minutes depending on your internet connection.
+</Note>
+
+## Sandbox Container Details
+
+### Base Image
+
+The Strix sandbox is built on `kalilinux/kali-rolling:latest` and includes:
+
+- **Operating System**: Kali Linux Rolling
+- **User**: `pentester` (non-root user with sudo access)
+- **Working Directory**: `/workspace`
+- **Architecture Support**: AMD64 (x86_64) and ARM64 (aarch64)
+
+### Installed Tools
+
+The sandbox comes pre-configured with a comprehensive toolkit:
+
+<CodeGroup>
+```bash Network Scanning
+# Pre-installed network tools
+nmap          # Network mapper
+ncat          # Network swiss army knife
+subfinder     # Subdomain discovery
+naabu         # Port scanner
+httpx         # HTTP toolkit
+katana        # Web crawler
+```
+
+```bash Web Testing
+# Web application testing tools
+ffuf          # Web fuzzer
+dirsearch     # Directory brute-forcer
+arjun         # HTTP parameter discovery
+wafw00f       # WAF detection
+sqlmap        # SQL injection testing
+nuclei        # Vulnerability scanner
+```
+
+```bash Code Analysis
+# Static and dynamic analysis
+semgrep       # Static analysis
+bandit        # Python security linter
+trufflehog    # Secrets scanning
+trivy         # Container security
+eslint        # JavaScript linting
+jshint        # JavaScript quality
+```
+
+```bash Specialized Tools
+# Additional capabilities
+jwt_tool      # JWT manipulation
+JS-Snooper    # JavaScript analysis
+jsniper       # JS endpoint finder
+caido-cli     # HTTP proxy
+playwright    # Browser automation
+```
+</CodeGroup>
+
+### Directory Structure
+
+The container is organized with the following directories:
+
+```
+/workspace/          # Your target application (mounted)
+/app/                # Strix runtime and tools
+/app/certs/          # SSL/TLS certificates
+/app/venv/           # Python virtual environment
+/home/pentester/     # User home directory
+  ├── configs/       # Tool configurations
+  ├── wordlists/     # Fuzzing wordlists
+  ├── output/        # Test results
+  ├── scripts/       # Custom scripts
+  └── tools/         # Additional tools
+```
+
+## HTTP Proxy (Caido)
+
+The sandbox includes a pre-configured Caido HTTP proxy:
+
+### Proxy Configuration
+
+The proxy is automatically started and configured:
+
+- **Port**: 48080
+- **Access**: Guest mode enabled
+- **CA Certificate**: Auto-generated and trusted
+- **Project**: Temporary project created on startup
+
+### SSL/TLS Certificate
+
+The container generates a root CA certificate for HTTPS interception:
+
+```bash
+# Certificate locations
+/app/certs/ca.crt    # Root CA certificate
+/app/certs/ca.key    # Private key
+/app/certs/ca.p12    # PKCS#12 bundle
+```
+
+The certificate is automatically:
+- Added to the system trust store
+- Imported into Caido
+- Configured for browser automation
+
+### Proxy Environment Variables
+
+All tools are pre-configured to use the proxy:
+
+```bash
+http_proxy=http://127.0.0.1:48080
+https_proxy=http://127.0.0.1:48080
+HTTP_PROXY=http://127.0.0.1:48080
+HTTPS_PROXY=http://127.0.0.1:48080
+ALL_PROXY=http://127.0.0.1:48080
+```
+
+## Entrypoint Script
+
+The container uses a custom entrypoint script that:
+
+<Steps>
+  <Step title="Starts Caido proxy">
+    Launches the HTTP proxy with guest access:
+    ```bash
+    caido-cli --listen 0.0.0.0:48080 --allow-guests --import-ca-cert
+    ```
+  </Step>
+  
+  <Step title="Obtains API token">
+    Authenticates and retrieves the Caido API token for programmatic access.
+  </Step>
+  
+  <Step title="Creates project">
+    Sets up a temporary Caido project for the scan session.
+  </Step>
+  
+  <Step title="Configures proxy">
+    Sets system-wide proxy environment variables in `/etc/profile.d/proxy.sh`.
+  </Step>
+  
+  <Step title="Trusts CA certificate">
+    Adds the root CA to browser and system trust stores.
+  </Step>
+  
+  <Step title="Starts tool server">
+    Launches the Strix tool server for agent communication.
+  </Step>
+</Steps>
+
+## Environment Variables
+
+The sandbox recognizes these environment variables:
+
+<CodeGroup>
+```bash Strix Configuration
+# Sandbox mode flag
+STRIX_SANDBOX_MODE=true
+
+# Execution timeout
+STRIX_SANDBOX_EXECUTION_TIMEOUT=120
+
+# Python path
+PYTHONPATH=/app
+```
+
+```bash Tool Server
+# Server authentication
+TOOL_SERVER_TOKEN=<generated-token>
+
+# Server port
+TOOL_SERVER_PORT=<assigned-port>
+
+# Request timeout
+TOOL_SERVER_TIMEOUT=120
+```
+
+```bash SSL/TLS
+# Certificate bundle locations
+REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+```
+</CodeGroup>
+
+## Runtime Configuration
+
+### Python Environment
+
+The container includes a Poetry-managed Python environment:
+
+```bash
+# Virtual environment
+VIRTUAL_ENV=/app/venv
+POETRY_HOME=/opt/poetry
+
+# Installed packages
+- playwright (with Chromium)
+- strix-agent with sandbox extras
+- All tool dependencies
+```
+
+### Path Configuration
+
+The PATH includes all tool binaries:
+
+```bash
+PATH=/home/pentester/go/bin:\
+     /home/pentester/.local/bin:\
+     /home/pentester/.npm-global/bin:\
+     /app/venv/bin:\
+     $PATH
+```
+
+## Advanced Usage
+
+### Running Tools Directly
+
+You can use Strix agents to run any pre-installed tool:
+
+```bash
+# Strix automatically uses the sandbox tools
+strix --target https://example.com
+```
+
+The agents have access to all tools via the terminal and Python environments.
+
+### Custom Tool Installation
+
+While the sandbox comes fully equipped, you can install additional tools through instructions:
+
+```bash
+strix --target https://example.com \
+  --instruction "Install and use custom-tool for testing"
+```
+
+### Resource Limits
+
+Docker resource limits are managed by Strix automatically, but you can configure Docker:
+
+```bash
+# ~/.docker/daemon.json
+{
+  "memory": "4g",
+  "cpus": "2"
+}
+```
+
+## Security Considerations
+
+<Warning>
+The sandbox container runs security testing tools that could be harmful if used improperly. Only test targets you own or have explicit permission to test.
+</Warning>
+
+### Isolation
+
+- **Network Isolation** - Container network is isolated from host
+- **Filesystem Isolation** - Only `/workspace` is mounted from host
+- **User Isolation** - Runs as non-root `pentester` user
+- **Temporary Projects** - Caido projects are temporary and not persisted
+
+### Best Practices
+
+- **Volume Mounts** - Strix only mounts necessary directories
+- **Network Access** - Container has internet access for testing
+- **Privileged Capabilities** - Only required capabilities are granted (e.g., `cap_net_raw` for nmap)
+- **Cleanup** - Containers are automatically cleaned up after scans
+
+## Troubleshooting
+
+### Docker Not Running
+
+If Docker is not available:
+
+```bash
+# Start Docker daemon
+sudo systemctl start docker
+
+# Or on macOS
+open -a Docker
+```
+
+### Image Pull Failures
+
+If the image fails to download:
+
+```bash
+# Manually pull the image
+docker pull <strix-sandbox-image>
+
+# Check Docker Hub status
+curl -I https://hub.docker.com
+```
+
+### Permission Errors
+
+On Linux, add your user to the docker group:
+
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+### Resource Constraints
+
+If you encounter memory or CPU issues:
+
+```bash
+# Check Docker resource usage
+docker stats
+
+# Increase Docker resources in Docker Desktop settings
+# Memory: 4GB+ recommended
+# CPUs: 2+ recommended
+```
+
+### Container Cleanup
+
+Strix automatically cleans up containers, but you can manually clean:
+
+```bash
+# Remove stopped containers
+docker container prune
+
+# Remove unused images
+docker image prune
+```
+
+## Next Steps
+
+- Learn about [CI/CD integration](/integrations/ci-cd) for automated testing
+- Review [GitHub Actions workflows](/integrations/github-actions)
+- Explore [CLI options](/cli/options) for advanced configuration

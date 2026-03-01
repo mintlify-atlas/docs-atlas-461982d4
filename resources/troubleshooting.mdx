@@ -1,0 +1,605 @@
+---
+title: Troubleshooting
+description: Solutions to common issues when using Strix for security testing
+---
+
+Find solutions to common problems you might encounter when using Strix.
+
+## Docker Issues
+
+### Docker is not running
+
+**Symptom:** Error message "Docker is not available" or "Docker daemon is not running"
+
+**Solutions:**
+
+1. **Start Docker Desktop**
+   - On macOS/Windows: Launch Docker Desktop from Applications
+   - On Linux: `sudo systemctl start docker`
+
+2. **Verify Docker is running**
+   ```bash
+   docker ps
+   ```
+   Should show running containers or empty list, not an error.
+
+3. **Check Docker permissions (Linux)**
+   ```bash
+   # Add your user to docker group
+   sudo usermod -aG docker $USER
+   
+   # Log out and back in, then verify
+   docker ps
+   ```
+
+4. **Reinstall Docker if necessary**
+   - Download from [docker.com](https://www.docker.com/products/docker-desktop/)
+   - Follow installation instructions for your OS
+
+### Port already in use
+
+**Symptom:** Error "port 48080 or 48081 already in use"
+
+**Solutions:**
+
+1. **Find and stop the process using the port**
+   ```bash
+   # On macOS/Linux
+   lsof -i :48080
+   lsof -i :48081
+   kill <PID>
+
+   # On Windows
+   netstat -ano | findstr :48080
+   taskkill /PID <PID> /F
+   ```
+
+2. **Stop previous Strix containers**
+   ```bash
+   docker ps -a | grep strix
+   docker stop <container-id>
+   docker rm <container-id>
+   ```
+
+3. **Clean up all stopped containers**
+   ```bash
+   docker container prune -f
+   ```
+
+### Container fails to start
+
+**Symptom:** Container starts then immediately exits
+
+**Solutions:**
+
+1. **Check Docker logs**
+   ```bash
+   docker logs <container-id>
+   ```
+
+2. **Ensure sufficient resources**
+   - Docker Desktop → Settings → Resources
+   - Allocate at least 4 GB RAM
+   - Ensure 10 GB+ free disk space
+
+3. **Pull latest image**
+   ```bash
+   docker pull usestrix/strix:latest
+   ```
+
+4. **Remove corrupted images**
+   ```bash
+   docker images | grep strix
+   docker rmi <image-id> --force
+   ```
+
+### Image pull fails
+
+**Symptom:** Cannot download Strix Docker image
+
+**Solutions:**
+
+1. **Check internet connectivity**
+   ```bash
+   ping docker.io
+   ```
+
+2. **Configure Docker proxy (if behind firewall)**
+   - Docker Desktop → Settings → Resources → Proxies
+   - Add your proxy configuration
+
+3. **Use alternative registry mirror**
+   ```bash
+   export DOCKER_REGISTRY_MIRROR="https://mirror.gcr.io"
+   ```
+
+4. **Manual pull with retry**
+   ```bash
+   docker pull usestrix/strix:latest --max-concurrent-downloads 1
+   ```
+
+## LLM Connection Issues
+
+### Invalid API key
+
+**Symptom:** "Authentication failed" or "Invalid API key"
+
+**Solutions:**
+
+1. **Verify API key is correct**
+   ```bash
+   echo $LLM_API_KEY
+   ```
+   Should print your key, not empty.
+
+2. **Check for extra spaces or quotes**
+   ```bash
+   # Correct
+   export LLM_API_KEY="sk-proj-abc123..."
+   
+   # Incorrect (no quotes needed if no spaces)
+   export LLM_API_KEY=sk-proj-abc123...
+   ```
+
+3. **Regenerate API key**
+   - Go to your LLM provider's dashboard
+   - Create new API key
+   - Update environment variable
+
+4. **Check key permissions**
+   - Ensure API key has necessary permissions
+   - Some providers require specific scopes enabled
+
+### Model not found
+
+**Symptom:** "Model 'X' not found" or "Unsupported model"
+
+**Solutions:**
+
+1. **Use correct model format**
+   ```bash
+   # Correct formats
+   export STRIX_LLM="openai/gpt-5"
+   export STRIX_LLM="anthropic/claude-sonnet-4-6"
+   export STRIX_LLM="vertex_ai/gemini-3-pro-preview"
+   ```
+
+2. **Check supported models**
+   See [LLM Providers](/configuration/llm-providers) for complete list.
+
+3. **Verify model access**
+   - Some models require approval or waitlist access
+   - Check your provider's dashboard
+
+4. **Use alternative model**
+   ```bash
+   # If GPT-5 unavailable, try GPT-4o
+   export STRIX_LLM="openai/gpt-4o"
+   ```
+
+### Rate limiting
+
+**Symptom:** "Rate limit exceeded" or 429 errors
+
+**Solutions:**
+
+1. **Wait before retrying**
+   - Most providers: 60 seconds
+   - Check provider's rate limit documentation
+
+2. **Use different API key**
+   - Create separate key with independent limits
+   - Use organization-level keys for higher limits
+
+3. **Upgrade API plan**
+   - Higher tiers usually have increased rate limits
+   - Consider provider's team/enterprise plans
+
+4. **Use slower scan mode**
+   ```bash
+   export STRIX_REASONING_EFFORT="medium"
+   strix --target https://app.com --scan-mode quick
+   ```
+
+5. **Switch to different provider**
+   ```bash
+   # Use Anthropic instead of OpenAI
+   export STRIX_LLM="anthropic/claude-sonnet-4-6"
+   export LLM_API_KEY="sk-ant-..."
+   ```
+
+### Connection timeout
+
+**Symptom:** "Connection timeout" or "Request timed out"
+
+**Solutions:**
+
+1. **Check internet connectivity**
+   ```bash
+   ping api.openai.com
+   ping api.anthropic.com
+   ```
+
+2. **Increase timeout**
+   ```bash
+   export LLM_TIMEOUT=600  # 10 minutes
+   ```
+
+3. **Configure proxy if needed**
+   ```bash
+   export HTTPS_PROXY="http://proxy.company.com:8080"
+   export HTTP_PROXY="http://proxy.company.com:8080"
+   ```
+
+4. **Use different API base URL**
+   ```bash
+   # For Azure OpenAI
+   export LLM_API_BASE="https://your-resource.openai.azure.com"
+   ```
+
+### Quota exceeded
+
+**Symptom:** "Quota exceeded" or "Insufficient credits"
+
+**Solutions:**
+
+1. **Check account balance**
+   - Log into provider dashboard
+   - Verify billing information is current
+
+2. **Add credits or upgrade plan**
+   - Add payment method
+   - Purchase additional credits
+
+3. **Use Strix Router for free credit**
+   ```bash
+   # Get $10 free at https://models.strix.ai
+   export STRIX_LLM="strix/gpt-5"
+   export LLM_API_KEY="your-strix-router-key"
+   ```
+
+## Installation Issues
+
+### Python version too old
+
+**Symptom:** "Python 3.12+ required" or import errors
+
+**Solutions:**
+
+1. **Check Python version**
+   ```bash
+   python --version
+   python3 --version
+   ```
+
+2. **Install Python 3.12+**
+   ```bash
+   # macOS with Homebrew
+   brew install python@3.12
+
+   # Ubuntu/Debian
+   sudo apt update
+   sudo apt install python3.12
+
+   # Windows: Download from python.org
+   ```
+
+3. **Use pyenv for version management**
+   ```bash
+   # Install pyenv
+   curl https://pyenv.run | bash
+
+   # Install Python 3.12
+   pyenv install 3.12.0
+   pyenv global 3.12.0
+   ```
+
+### pip install fails
+
+**Symptom:** Errors during `pip install strix-agent`
+
+**Solutions:**
+
+1. **Upgrade pip**
+   ```bash
+   pip install --upgrade pip
+   ```
+
+2. **Use pipx (recommended)**
+   ```bash
+   # Install pipx
+   python3 -m pip install --user pipx
+   python3 -m pipx ensurepath
+
+   # Install Strix with pipx
+   pipx install strix-agent
+   ```
+
+3. **Install with verbose output**
+   ```bash
+   pip install strix-agent -vvv
+   ```
+   Review errors for specific missing dependencies.
+
+4. **Install from source**
+   ```bash
+   git clone https://github.com/usestrix/strix.git
+   cd strix
+   poetry install
+   ```
+
+### Command not found
+
+**Symptom:** `strix: command not found` after installation
+
+**Solutions:**
+
+1. **Add pip/pipx to PATH**
+   ```bash
+   # Add to ~/.bashrc or ~/.zshrc
+   export PATH="$HOME/.local/bin:$PATH"
+
+   # Reload shell
+   source ~/.bashrc  # or ~/.zshrc
+   ```
+
+2. **Use python -m**
+   ```bash
+   python -m strix --target https://app.com
+   ```
+
+3. **Verify installation location**
+   ```bash
+   pip show strix-agent
+   which strix
+   ```
+
+## Scan Issues
+
+### Scan hangs or freezes
+
+**Symptom:** Scan appears stuck with no progress
+
+**Solutions:**
+
+1. **Check LLM API status**
+   - Visit provider status page
+   - Look for service disruptions
+
+2. **Enable debug logging**
+   ```bash
+   export STRIX_LOG_LEVEL=DEBUG
+   strix --target https://app.com
+   ```
+
+3. **Reduce scan complexity**
+   ```bash
+   strix --target https://app.com --scan-mode quick
+   ```
+
+4. **Check system resources**
+   ```bash
+   # Monitor CPU and memory
+   htop  # or top
+   
+   # Check Docker resource usage
+   docker stats
+   ```
+
+### No vulnerabilities found
+
+**Symptom:** Scan completes but reports no findings
+
+**Possible causes:**
+
+1. **Application is secure** - This is good news!
+
+2. **Insufficient testing depth**
+   ```bash
+   # Use deeper scan mode
+   strix --target https://app.com --scan-mode deep
+   ```
+
+3. **Missing authentication**
+   ```bash
+   # Provide credentials for authenticated testing
+   strix --target https://app.com \
+     --instruction "Login with username: test@example.com, password: test123"
+   ```
+
+4. **Scope too narrow**
+   ```bash
+   # Remove restrictive instructions
+   strix --target https://app.com
+   # Instead of: --instruction "Only test /api endpoint"
+   ```
+
+### Too many false positives
+
+**Symptom:** Scan reports vulnerabilities that don't exist
+
+**Solutions:**
+
+1. **Review findings carefully**
+   - Check the proof-of-concept
+   - Verify reproduction steps
+   - Strix validates most findings, but confirm manually
+
+2. **Use higher quality models**
+   ```bash
+   # GPT-5 and Claude Sonnet 4.6 have better accuracy
+   export STRIX_LLM="openai/gpt-5"
+   ```
+
+3. **Provide more context**
+   ```bash
+   strix --target https://app.com \
+     --instruction "This is a read-only demo. Ignore CSRF on GET requests."
+   ```
+
+4. **Report false positives**
+   - Help improve Strix by reporting issues
+   - [GitHub Issues](https://github.com/usestrix/strix/issues)
+
+### Scan crashes
+
+**Symptom:** Strix exits unexpectedly with error
+
+**Solutions:**
+
+1. **Check error message**
+   - Read the full traceback
+   - Look for specific error codes
+
+2. **Update to latest version**
+   ```bash
+   pip install --upgrade strix-agent
+   ```
+
+3. **Clear Docker cache**
+   ```bash
+   docker system prune -a
+   ```
+
+4. **Report the crash**
+   - Include full error traceback
+   - [GitHub Issues](https://github.com/usestrix/strix/issues)
+
+## Configuration Issues
+
+### Environment variables not persisting
+
+**Symptom:** Variables work in terminal but not after restart
+
+**Solutions:**
+
+1. **Add to shell configuration**
+   ```bash
+   # For bash: ~/.bashrc
+   # For zsh: ~/.zshrc
+   export STRIX_LLM="openai/gpt-5"
+   export LLM_API_KEY="your-api-key"
+
+   # Reload
+   source ~/.bashrc  # or ~/.zshrc
+   ```
+
+2. **Use Strix config file**
+   Strix saves configuration to `~/.strix/cli-config.json` automatically.
+   ```bash
+   # First run saves config
+   strix --target https://app.com
+   
+   # Subsequent runs use saved config
+   strix --target https://other-app.com
+   ```
+
+3. **Use .env file**
+   ```bash
+   # Create .env in project directory
+   echo 'STRIX_LLM="openai/gpt-5"' > .env
+   echo 'LLM_API_KEY="your-key"' >> .env
+
+   # Load before running
+   source .env && strix --target https://app.com
+   ```
+
+### Cannot access target URL
+
+**Symptom:** "Cannot connect to target" or "Target unreachable"
+
+**Solutions:**
+
+1. **Verify URL is accessible**
+   ```bash
+   curl -I https://your-app.com
+   ```
+
+2. **Check for localhost/internal IPs**
+   ```bash
+   # Use host.docker.internal for local services
+   strix --target http://host.docker.internal:3000
+   ```
+
+3. **Configure Docker network**
+   ```bash
+   # For accessing host services
+   export STRIX_DOCKER_NETWORK="host"
+   ```
+
+4. **Disable SSL verification (not recommended)**
+   ```bash
+   export STRIX_VERIFY_SSL=false
+   ```
+
+<Warning>
+  Only disable SSL verification for testing environments. Never use this for production systems.
+</Warning>
+
+## Performance Issues
+
+### Scans are very slow
+
+**Solutions:**
+
+1. **Use faster LLM models**
+   ```bash
+   # GPT-5 is faster than GPT-4o
+   export STRIX_LLM="openai/gpt-5"
+   ```
+
+2. **Enable prompt caching**
+   ```bash
+   # Enabled by default, verify it's not disabled
+   export STRIX_ENABLE_PROMPT_CACHING=true
+   ```
+
+3. **Use quick scan mode**
+   ```bash
+   strix --target https://app.com --scan-mode quick
+   ```
+
+4. **Allocate more Docker resources**
+   - Docker Desktop → Settings → Resources
+   - Increase CPU and RAM allocation
+
+### High memory usage
+
+**Solutions:**
+
+1. **Limit concurrent agents**
+   ```bash
+   export STRIX_MAX_AGENTS=3
+   ```
+
+2. **Use smaller context windows**
+   ```bash
+   export STRIX_MAX_CONTEXT=50000
+   ```
+
+3. **Close other applications**
+   - Free up system RAM
+   - Docker requires significant resources
+
+## Getting Help
+
+If you're still experiencing issues:
+
+1. **Search existing issues**
+   - [GitHub Issues](https://github.com/usestrix/strix/issues)
+   - Someone may have encountered the same problem
+
+2. **Join Discord community**
+   - [discord.gg/strix-ai](https://discord.gg/strix-ai)
+   - Get real-time help from community
+
+3. **Create detailed bug report**
+   - Include system information
+   - Provide full error traceback
+   - List steps to reproduce
+   - See [Contributing Guide](/resources/contributing#reporting-issues)
+
+4. **Check documentation**
+   - [Installation Guide](/installation)
+   - [Configuration Reference](/configuration/environment-variables)
+   - [LLM Providers](/configuration/llm-providers)

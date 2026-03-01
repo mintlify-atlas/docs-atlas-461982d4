@@ -1,0 +1,157 @@
+---
+title: Framework Skills
+description: Framework-specific security testing skills for popular web frameworks
+---
+
+Framework skills provide Strix agents with specialized knowledge for testing security vulnerabilities in specific web frameworks. These skills understand framework-specific patterns, common misconfigurations, and exploitation techniques unique to each framework's architecture.
+
+## Available Framework Skills
+
+<CardGroup cols={2}>
+  <Card title="FastAPI" icon="bolt">
+    Security testing for FastAPI/Starlette applications covering ASGI, dependency injection, and API vulnerabilities.
+  </Card>
+  <Card title="Next.js" icon="react">
+    Testing playbook for Next.js covering App Router, Server Actions, RSC, and Edge runtime vulnerabilities.
+  </Card>
+</CardGroup>
+
+## FastAPI Skill
+
+The FastAPI skill provides comprehensive testing knowledge for FastAPI and Starlette applications.
+
+### Attack Surface Coverage
+
+**Core Components**
+- ASGI middlewares: CORS, TrustedHost, ProxyHeaders, Session, exception handlers
+- Routers and sub-apps: APIRouter prefixes/tags, mounted apps, versioned paths
+- Dependency injection: `Depends`, `Security`, `OAuth2PasswordBearer`, scopes
+
+**High-Value Targets**
+- `/openapi.json`, `/docs`, `/redoc` endpoints in production
+- Auth flows: token endpoints, session/cookie bridges, OAuth device/PKCE
+- Admin/staff routers, `include_in_schema=False` endpoints
+- File upload/download, import/export, signed URL generators
+- WebSocket endpoints and background job endpoints
+
+### Key Vulnerabilities
+
+**Authentication & Authorization**
+- Dependency injection gaps: routes missing security dependencies
+- JWT misuse: decode without verify, algorithm confusion, missing audience validation
+- Session weaknesses: weak `secret_key`, fixation, CSRF exposure
+- OAuth/OIDC flow issues: PKCE bypass, state/nonce weaknesses
+
+**Input Handling**
+- Pydantic exploitation: type coercion, `extra = "allow"` permitting control field injection
+- Content-type switching between JSON, form-data, and multipart
+- Parameter manipulation: case variations, duplicate parameters, method override
+
+**Server-Side Issues**
+- Template injection (Jinja2): server-side template injection to RCE
+- SSRF: user-supplied URLs in imports, previews, webhook validation
+- File upload: path traversal, storage root enforcement, symlink following
+
+### Testing Approach
+
+1. **Enumerate** - Fetch OpenAPI, diff with fuzzing for hidden endpoints
+2. **Matrix testing** - Test each route across: unauth/user/admin × HTTP/WebSocket × JSON/form/multipart
+3. **Dependency analysis** - Map which dependencies enforce auth vs parse input
+4. **Channel consistency** - Verify same authorization on HTTP and WebSocket
+
+## Next.js Skill
+
+The Next.js skill covers security testing for modern Next.js applications including App Router and Server Actions.
+
+### Attack Surface Coverage
+
+**Routers & Runtimes**
+- App Router (`app/`) and Pages Router (`pages/`) coexistence
+- Route Handlers (`app/api/**`) and API routes (`pages/api/**`)
+- Edge vs Node.js runtime differences
+- Middleware bypass opportunities
+
+**High-Value Targets**
+- Middleware-protected routes (auth, geo, A/B testing)
+- Admin/staff paths, draft/preview content, revalidate endpoints
+- RSC payloads and flight data
+- Image optimizer and remote loaders
+- NextAuth callbacks and sign-in providers
+
+### Key Vulnerabilities
+
+**Middleware Bypass**
+- `x-middleware-subrequest` header crafting
+- Path normalization differences: double slashes, trailing slashes, dot segments
+- Parameter pollution: middleware checks first value, handler uses last
+
+**Server Actions**
+- Invoke actions outside UI flow with alternate content-types
+- Authorization assumed from client state rather than enforced server-side
+- IDOR via object references in action payloads
+
+**RSC & Caching**
+- User-bound data cached without identity keys
+- Flight data leakage in streamed RSC payloads
+- ISR issues: stale data containing user-specific or tenant-dependent content
+
+**Data Exposure**
+- `__NEXT_DATA__` over-fetching: full user objects when only username needed
+- Internal IDs, tokens, admin-only fields in page props
+- Environment-dependent exposure differences
+
+**Image Optimizer SSRF**
+- Broad `remotePatterns` in `next.config.js`
+- Custom loader protocol smuggling
+- Cache poisoning via URL normalization
+
+### Testing Approach
+
+1. **Enumerate** - Use `__BUILD_MANIFEST`, source maps, build artifacts, sitemap
+2. **Runtime matrix** - Test each route under Edge and Node runtimes
+3. **Role matrix** - Test as unauth/user/admin across SSR, API routes, Route Handlers, Server Actions
+4. **Cache probing** - Verify caching respects identity
+5. **Cross-router** - Compare authorization between App Router and Pages Router
+
+## Framework Skill Benefits
+
+Framework skills provide:
+
+- **Context-aware testing** - Understanding of framework-specific patterns and anti-patterns
+- **Reconnaissance techniques** - Framework-specific discovery methods (OpenAPI for FastAPI, `__BUILD_MANIFEST` for Next.js)
+- **Bypass methods** - Techniques to evade framework-level protections
+- **Validation requirements** - Framework-appropriate evidence and proof standards
+
+## Combining with Vulnerability Skills
+
+Framework skills work best when combined with vulnerability skills:
+
+```python
+# Test FastAPI authentication
+create_agent(
+    task="Test JWT authentication in FastAPI app",
+    skills="authentication_jwt,idor,fastapi"
+)
+
+# Test Next.js for XSS and data exposure
+create_agent(
+    task="Test Next.js Server Components for XSS",
+    skills="xss,nextjs"
+)
+```
+
+The framework skill provides context (where to look, how to bypass), while vulnerability skills provide exploitation techniques (what to test, how to validate).
+
+## When to Use Framework Skills
+
+Load framework skills when:
+
+- Testing applications built with FastAPI or Next.js
+- You need framework-specific reconnaissance techniques
+- The application uses framework features requiring specialized knowledge (dependency injection, Server Actions)
+- You want to test framework-level security mechanisms (middleware, caching, routing)
+- You need to understand framework-specific bypass techniques
+
+<Note>
+Framework skills are actively maintained to track the latest framework versions and security patterns. More framework skills (Django, Express, Laravel) are coming soon.
+</Note>

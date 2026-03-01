@@ -1,0 +1,590 @@
+---
+title: Skills
+description: Specialized security knowledge that enhances Strix agents
+---
+
+Skills are knowledge packages that inject specialized security expertise into agent context. Each skill provides advanced testing techniques, practical examples, and validation methods for specific vulnerability types, technologies, or frameworks.
+
+## Overview
+
+From the skills documentation:
+
+> Skills are specialized knowledge packages that enhance Strix agents with deep expertise in specific vulnerability types, technologies, and testing methodologies. Each skill provides advanced techniques, practical examples, and validation methods that go beyond baseline security knowledge.
+
+Agents can load up to **5 skills** at creation time, selecting the most relevant ones for their specific task.
+
+## How Skills Work
+
+### Dynamic Injection
+
+When an agent is created, skills are loaded and injected into the system prompt:
+
+```python
+# From strix/skills/__init__.py
+def load_skills(skill_names: list[str]) -> dict[str, str]:
+    skill_content = {}
+    skills_dir = get_strix_resource_path("skills")
+    
+    for skill_name in skill_names:
+        # Find skill file in categories
+        for category, skills in all_categories.items():
+            if skill_name in skills:
+                skill_path = f"{category}/{skill_name}.md"
+                break
+        
+        # Load and strip frontmatter
+        content = full_path.read_text(encoding="utf-8")
+        content = _FRONTMATTER_PATTERN.sub("", content).lstrip()
+        skill_content[skill_name] = content
+    
+    return skill_content
+```
+
+### Agent Creation with Skills
+
+```python
+# From strix/tools/agents_graph/agents_graph_actions.py
+create_agent(
+    task="Test JWT authentication for token forgery and algorithm confusion",
+    name="JWT Security Specialist",
+    skills="authentication_jwt,business_logic"  # Comma-separated
+)
+```
+
+The LLM configuration includes the loaded skills:
+
+```python
+# From strix/agents/StrixAgent/strix_agent.py
+self.default_llm_config = LLMConfig(skills=default_skills)
+```
+
+<Info>
+Skills are **not** additional tools. They're knowledge injected into the agent's system prompt to guide reasoning and testing strategies.
+</Info>
+
+## Skill Categories
+
+Skills are organized by domain:
+
+### Vulnerabilities
+
+**Path:** `strix/skills/vulnerabilities/`
+
+Core vulnerability classes for web applications and APIs:
+
+<AccordionGroup>
+  <Accordion title="Authentication & Authorization">
+    - `authentication_jwt` - JWT/OIDC security testing, algorithm confusion, token forgery
+    - `broken_function_level_authorization` - Vertical privilege escalation, role bypasses
+    - `idor` - Insecure Direct Object References, horizontal privilege escalation
+    - `mass_assignment` - Parameter pollution, unintended field updates
+  </Accordion>
+  
+  <Accordion title="Injection Attacks">
+    - `sql_injection` - SQLi detection, exploitation, and validation
+    - `xss` - Cross-Site Scripting (reflected, stored, DOM-based)
+    - `xxe` - XML External Entity attacks
+    - `rce` - Remote Code Execution vulnerabilities
+    - `ssrf` - Server-Side Request Forgery
+    - `path_traversal_lfi_rfi` - File path attacks, Local/Remote File Inclusion
+  </Accordion>
+  
+  <Accordion title="Business Logic & Data">
+    - `business_logic` - Application logic flaws, race conditions, state manipulation
+    - `race_conditions` - TOCTOU, parallel request attacks
+    - `information_disclosure` - Sensitive data exposure, verbose errors
+    - `insecure_file_uploads` - File upload bypasses, malicious content
+  </Accordion>
+  
+  <Accordion title="Web-Specific">
+    - `csrf` - Cross-Site Request Forgery
+    - `open_redirect` - Unvalidated redirects
+    - `subdomain_takeover` - DNS and hosting misconfigurations
+  </Accordion>
+</AccordionGroup>
+
+**Available skills:**
+```bash
+$ ls strix/skills/vulnerabilities/
+authentication_jwt.md
+broken_function_level_authorization.md
+business_logic.md
+csrf.md
+idor.md
+information_disclosure.md
+insecure_file_uploads.md
+mass_assignment.md
+open_redirect.md
+path_traversal_lfi_rfi.md
+race_conditions.md
+rce.md
+sql_injection.md
+ssrf.md
+subdomain_takeover.md
+xss.md
+xxe.md
+```
+
+### Frameworks
+
+**Path:** `strix/skills/frameworks/`
+
+Framework-specific testing techniques:
+
+- `fastapi` - FastAPI security patterns, Pydantic bypasses, async vulnerabilities
+- `nextjs` - Next.js API routes, SSR/SSG security, middleware bypasses
+
+**Use case:**
+```python
+create_agent(
+    task="Analyze Next.js application for security vulnerabilities",
+    name="Next.js Security Auditor",
+    skills="nextjs,xss,csrf,authentication_jwt"
+)
+```
+
+### Technologies
+
+**Path:** `strix/skills/technologies/`
+
+Third-party service and platform-specific knowledge:
+
+- Authentication providers (Auth0, Firebase, Supabase)
+- Payment gateways (Stripe, PayPal)
+- Cloud services (AWS, Azure, GCP)
+- Databases and storage systems
+
+### Protocols
+
+**Path:** `strix/skills/protocols/`
+
+Protocol-specific testing patterns:
+
+- `graphql` - GraphQL introspection, batching attacks, depth limits
+- `websocket` - WebSocket security, message injection
+- `oauth` - OAuth2 flows, PKCE, redirect_uri validation
+- `grpc` - gRPC reflection, metadata manipulation
+
+### Cloud
+
+**Path:** `strix/skills/cloud/`
+
+Cloud provider security testing:
+
+- `aws` - AWS-specific misconfigurations, IAM issues
+- `azure` - Azure security, Managed Identity exploitation
+- `gcp` - GCP metadata service, service account abuse
+- `kubernetes` - K8s API security, pod escapes
+
+### Reconnaissance
+
+**Path:** `strix/skills/reconnaissance/`
+
+Advanced information gathering:
+
+- Subdomain enumeration techniques
+- Technology fingerprinting
+- API discovery methods
+- Attack surface mapping
+
+### Custom
+
+**Path:** `strix/skills/custom/`
+
+Community-contributed and specialized skills for:
+
+- Industry-specific testing (healthcare, finance, IoT)
+- Regional compliance requirements
+- Proprietary technology stacks
+
+## Skill Structure
+
+### Anatomy of a Skill
+
+Let's examine the JWT authentication skill:
+
+```markdown
+---
+name: authentication-jwt
+description: JWT and OIDC security testing covering token forgery, algorithm confusion, and claim manipulation
+---
+
+# Authentication / JWT / OIDC
+
+JWT/OIDC failures often enable token forgery, token confusion, cross-service acceptance, and durable account takeover.
+
+## Attack Surface
+
+- Web/mobile/API authentication using JWT (JWS/JWE) and OIDC/OAuth2
+- Access vs ID tokens, refresh tokens, device/PKCE/Backchannel flows
+- First-party and microservices verification, gateways, and JWKS distribution
+
+## Reconnaissance
+
+### Endpoints
+
+- Well-known: `/.well-known/openid-configuration`, `/oauth2/.well-known/openid-configuration`
+- Keys: `/jwks.json`, rotating key endpoints, tenant-specific JWKS
+- Auth: `/authorize`, `/token`, `/introspect`, `/revoke`, `/logout`
+
+### Token Features
+
+- Headers: `{"alg":"RS256","kid":"...","typ":"JWT","jku":"...","x5u":"..."}`
+- Claims: `{"iss":"...","aud":"...","sub":"user","scope":"...","exp":...}`
+
+## Key Vulnerabilities
+
+### Signature Verification
+
+- **RS256→HS256 confusion**: Change alg to HS256 and use RSA public key as HMAC secret
+- **"none" algorithm**: Set `"alg":"none"` and drop signature if libraries accept it
+- **ECDSA malleability**: Weak verification accepting non-canonical signatures
+
+### Header Manipulation
+
+- **kid injection**: Path traversal `../../../../keys/prod.key`, SQL/command injection
+- **jku/x5u abuse**: Host attacker-controlled JWKS/X509; if not pinned, server fetches attacker keys
+- **jwk header injection**: Embed attacker JWK in header
+
+### Claims Validation Gaps
+
+- **iss/aud/azp not enforced**: Cross-service token reuse
+- **scope/roles fully trusted**: Privilege inflation via claim edits
+- **exp/nbf/iat not enforced**: Accept expired tokens
+
+## Advanced Techniques
+
+### Microservices and Gateways
+
+- Audience mismatch: Services verify signature but ignore aud
+- Header trust: Gateway injects X-User-Id, backend trusts it over token
+
+### JWS Edge Cases
+
+- Unencoded payload (b64=false) with crit header
+- Nested JWT verification order errors
+```
+
+Each skill provides:
+
+1. **Frontmatter metadata**: Name and description
+2. **Attack surface**: Where vulnerabilities commonly appear
+3. **Reconnaissance**: How to discover potential issues
+4. **Key vulnerabilities**: Specific weaknesses to test for
+5. **Advanced techniques**: Non-obvious attack vectors
+6. **Special contexts**: Platform or environment-specific considerations
+
+### Best Practices for Skills
+
+A good skill should:
+
+✅ **Focus on actionable techniques** - Not just theory, but specific testing methods
+✅ **Include practical examples** - Real payloads, commands, and test cases
+✅ **Provide validation methods** - How to confirm findings and avoid false positives
+✅ **Cover edge cases** - Non-obvious scenarios and configuration-dependent behavior
+✅ **Be concise** - Focus on high-value information, avoid redundancy
+
+## Skill Selection Strategy
+
+### Automatic Selection
+
+The root agent analyzes the target and automatically creates sub-agents with relevant skills:
+
+```python
+# Root agent reasoning:
+# "Target is a REST API with JWT authentication"
+# "I should create a specialized agent for JWT testing"
+
+create_agent(
+    task="Analyze JWT implementation for security vulnerabilities",
+    name="JWT Security Specialist",
+    skills="authentication_jwt,broken_function_level_authorization"
+)
+```
+
+### Manual Selection
+
+You can guide skill selection through instructions:
+
+```bash
+strix scan \
+  --target https://api.example.com \
+  --instructions "Focus on GraphQL-specific vulnerabilities including batching attacks and introspection abuse"
+```
+
+The agent will prioritize the `graphql` skill and related vulnerability skills.
+
+### Skill Limits
+
+Agents can load **maximum 5 skills** to balance:
+
+- **Context window size**: More skills = larger prompts
+- **Focus**: Too many skills dilute attention
+- **Relevance**: Each skill should apply to the task
+
+```python
+# Good: Focused selection
+skills="authentication_jwt,idor,business_logic"
+
+# Bad: Unfocused, wasted skill slots
+skills="xss,sql_injection,csrf,xxe,ssrf"  # Too broad for one agent
+```
+
+<Warning>
+Choose skills that complement each other and are relevant to the specific task. Generic collections of unrelated skills reduce effectiveness.
+</Warning>
+
+## Skill Discovery
+
+List available skills:
+
+```python
+# From strix/skills/__init__.py
+from strix.skills import get_available_skills
+
+available = get_available_skills()
+for category, skills in available.items():
+    print(f"{category}: {', '.join(skills)}")
+```
+
+Validate skill names:
+
+```python
+from strix.skills import validate_skill_names
+
+result = validate_skill_names([
+    "authentication_jwt",
+    "graphql",
+    "nonexistent_skill"
+])
+
+print(result["valid"])    # ["authentication_jwt", "graphql"]
+print(result["invalid"])  # ["nonexistent_skill"]
+```
+
+## Creating Custom Skills
+
+### Skill Template
+
+Create a new skill file in `~/.strix/skills/custom/`:
+
+```markdown
+---
+name: my-custom-skill
+description: Brief description of what this skill covers
+---
+
+# Skill Title
+
+Introduction explaining the security domain.
+
+## Attack Surface
+
+Where these vulnerabilities commonly appear:
+- Component A
+- Feature B
+- Integration C
+
+## Reconnaissance
+
+How to discover potential issues:
+
+### Discovery Methods
+
+- Check for indicator X
+- Look for pattern Y
+- Analyze behavior Z
+
+### Common Endpoints
+
+- `/api/endpoint1`
+- `/admin/endpoint2`
+
+## Key Vulnerabilities
+
+### Vulnerability Class 1
+
+Description of the vulnerability.
+
+**Testing approach:**
+
+1. Step one
+2. Step two
+3. Step three
+
+**Example payload:**
+
+```http
+POST /api/endpoint HTTP/1.1
+Host: example.com
+Content-Type: application/json
+
+{"param": "malicious_value"}
+```
+
+### Vulnerability Class 2
+
+...
+
+## Advanced Techniques
+
+Non-obvious attack vectors and edge cases.
+
+## Special Contexts
+
+Platform-specific considerations:
+
+### Mobile Applications
+
+- Mobile-specific attack surfaces
+
+### Microservices
+
+- Service mesh security considerations
+```
+
+### Registering Custom Skills
+
+Custom skills are automatically discovered from:
+
+1. `~/.strix/skills/custom/` (user-level)
+2. `./strix_skills/` (project-level)
+
+Use them like built-in skills:
+
+```python
+create_agent(
+    task="Test custom authentication system",
+    name="Custom Auth Tester",
+    skills="my-custom-skill,authentication_jwt"
+)
+```
+
+## Skill Examples
+
+### Combining Skills Effectively
+
+**API Testing:**
+```python
+skills="authentication_jwt,broken_function_level_authorization,idor,mass_assignment"
+```
+
+**GraphQL Security:**
+```python
+skills="graphql,idor,broken_function_level_authorization,information_disclosure"
+```
+
+**Cloud Application:**
+```python
+skills="aws,ssrf,information_disclosure,rce"
+```
+
+**Web Application:**
+```python
+skills="xss,csrf,sql_injection,business_logic"
+```
+
+### Skill Inheritance
+
+Sub-agents don't inherit parent skills:
+
+```python
+# Parent has skills: ["authentication_jwt", "idor"]
+
+# Sub-agent gets its own skills based on task
+create_agent(
+    task="Test file upload functionality",
+    name="Upload Security Tester",
+    skills="insecure_file_uploads,path_traversal_lfi_rfi,rce"  # Different from parent
+)
+```
+
+## Internal Skills
+
+Some skills are used internally by Strix:
+
+### Scan Modes
+
+**Path:** `strix/skills/scan_modes/`
+
+Define high-level testing strategies:
+- `quick` - Fast vulnerability discovery
+- `thorough` - Comprehensive testing
+- `stealth` - Low-noise testing
+
+### Coordination
+
+**Path:** `strix/skills/coordination/`
+
+Multi-agent orchestration patterns:
+- `root_agent` - Loaded by root agents for coordination strategies
+
+<Note>
+Internal skills are excluded from user-facing skill selection but are automatically applied when appropriate.
+</Note>
+
+## Contributing Skills
+
+Share your skills with the community:
+
+1. **Create skill file** following the structure above
+2. **Test thoroughly** with real applications
+3. **Submit pull request** to [Strix repository](https://github.com/usestrix/strix)
+4. **Document use cases** in the PR description
+
+### Contribution Guidelines
+
+- **Accuracy**: Techniques must be practical and effective
+- **Completeness**: Cover attack surface, reconnaissance, and exploitation
+- **Examples**: Include working payloads and commands
+- **Validation**: Explain how to confirm findings
+- **Originality**: Add value beyond existing skills
+
+## Skill Limitations
+
+### Not a Replacement for Tools
+
+Skills provide **knowledge**, not capabilities. Agents still need appropriate tools:
+
+```python
+# Skill provides knowledge about SQLi
+skills="sql_injection"
+
+# But agent needs terminal tool to run sqlmap
+terminal_execute(command="sqlmap -u https://example.com/?id=1 --batch")
+```
+
+### Context Window Constraints
+
+More skills = larger prompts = higher costs and latency:
+
+- Each skill adds ~1-5K tokens
+- 5 skills can add 5-25K tokens
+- Monitor LLM costs if using many skills
+
+### Specificity vs. Generalization
+
+Skills should be:
+- **Specific enough** to provide actionable techniques
+- **General enough** to apply across multiple targets
+
+Avoid:
+- Overly generic skills that duplicate baseline knowledge
+- Hyper-specific skills that only apply to one application
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Agents" icon="robot" href="/concepts/agents">
+    Learn how agents use skills
+  </Card>
+  <Card title="Tools" icon="wrench" href="/concepts/tools">
+    Explore available tools
+  </Card>
+  <Card title="Vulnerability Detection" icon="bug-slash" href="/concepts/vulnerability-detection">
+    See skills in action
+  </Card>
+  <Card title="Contributing" icon="code-pull-request" href="/resources/contributing">
+    Create and share your own skills
+  </Card>
+</CardGroup>

@@ -1,0 +1,346 @@
+---
+title: CLI Examples
+description: Common usage patterns and real-world examples for Strix CLI
+---
+
+This page demonstrates common usage patterns and workflows for the Strix CLI.
+
+## Basic Usage
+
+### Scan a Web Application
+
+```bash
+strix --target https://example.com
+```
+
+This launches an interactive TUI session and performs a deep penetration test of the web application.
+
+### Scan a GitHub Repository
+
+```bash
+strix --target https://github.com/user/repo
+```
+
+Strix clones the repository and performs static code analysis to find vulnerabilities.
+
+### Scan Local Code
+
+```bash
+strix --target ./my-project
+```
+
+Analyze local source code for security issues.
+
+## Multi-Target Scanning
+
+### White-Box Web Application Testing
+
+Combine source code analysis with live application testing:
+
+```bash
+strix --target https://github.com/user/webapp --target https://example.com
+```
+
+This provides comprehensive coverage by analyzing both code and runtime behavior.
+
+### Multiple Environments
+
+Test staging and production simultaneously:
+
+```bash
+strix --target ./my-app --target https://staging.example.com --target https://prod.example.com
+```
+
+## Custom Instructions
+
+### Inline Instructions
+
+Focus on specific vulnerability types:
+
+```bash
+strix --target https://example.com --instruction "Focus on authentication vulnerabilities"
+```
+
+Provide test credentials:
+
+```bash
+strix --target https://example.com --instruction "Use credentials admin:password123 to access the admin panel"
+```
+
+### Instructions from File
+
+Create a file `instructions.txt`:
+
+```txt
+# Security Test Requirements
+
+## Focus Areas
+- Authentication and session management
+- API authorization controls  
+- SQL injection in search endpoints
+
+## Test Credentials
+- Regular user: user@example.com / password123
+- Admin: admin@example.com / admin456
+
+## Known Issues to Verify
+- Check if password reset tokens expire
+- Test for IDOR in /api/users/:id endpoint
+```
+
+Then run:
+
+```bash
+strix --target https://example.com --instruction-file ./instructions.txt
+```
+
+## Scan Modes
+
+### Quick Scan (CI/CD)
+
+Fast scan for continuous integration:
+
+```bash
+strix --target https://example.com --scan-mode quick --non-interactive
+```
+
+### Standard Scan
+
+Balanced depth and speed:
+
+```bash
+strix --target https://example.com --scan-mode standard
+```
+
+### Deep Scan (Default)
+
+Thorough pre-release security audit:
+
+```bash
+strix --target https://example.com --scan-mode deep
+```
+
+## Non-Interactive Mode
+
+### CI/CD Integration
+
+Run in headless mode suitable for automation:
+
+```bash
+strix --target https://example.com --non-interactive
+```
+
+This prints vulnerabilities to stdout and exits with code 2 if issues are found.
+
+### Save Output to File
+
+```bash
+strix --target https://example.com --non-interactive > scan-results.txt 2>&1
+```
+
+### Check Exit Code
+
+```bash
+strix --target https://example.com --non-interactive
+if [ $? -eq 2 ]; then
+  echo "Vulnerabilities found!"
+  exit 1
+fi
+```
+
+## Advanced Workflows
+
+### Comprehensive Pre-Release Audit
+
+```bash
+strix --target ./source-code \
+  --target https://staging.example.com \
+  --scan-mode deep \
+  --instruction-file ./security-requirements.md
+```
+
+### Quick PR Security Check
+
+```bash
+strix --target ./feature-branch \
+  --scan-mode quick \
+  --instruction "Focus on changes in authentication module" \
+  --non-interactive
+```
+
+### Domain Reconnaissance
+
+```bash
+strix --target example.com
+```
+
+Test a domain (not just a specific URL) to discover and test all services.
+
+### Internal Network Testing
+
+```bash
+strix --target 192.168.1.42
+```
+
+Test an internal IP address or host.
+
+## Using Custom Configuration
+
+### Create Configuration Profile
+
+Create `prod-config.json`:
+
+```json
+{
+  "strix_llm": "openai/gpt-4",
+  "llm_api_base": "https://api.openai.com/v1",
+  "llm_timeout": 600,
+  "strix_reasoning_effort": "xhigh"
+}
+```
+
+### Use Configuration
+
+```bash
+strix --target https://example.com --config ./prod-config.json
+```
+
+## Real-World Scenarios
+
+### Scenario 1: New Feature Security Review
+
+You've just developed a new authentication feature:
+
+```bash
+strix --target ./my-app \
+  --target https://staging.example.com \
+  --instruction "Focus on the new OAuth2 implementation in /auth endpoints. Test for token leakage and session fixation."
+```
+
+### Scenario 2: Pre-Production Checklist
+
+Before deploying to production:
+
+```bash
+strix --target https://staging.example.com \
+  --scan-mode deep \
+  --instruction-file ./security-checklist.md
+```
+
+### Scenario 3: API Security Testing
+
+Test a REST API:
+
+```bash
+strix --target https://api.example.com \
+  --instruction "Focus on API authorization. Test credentials: api_key=abc123. Check for IDOR, broken authentication, and rate limiting."
+```
+
+### Scenario 4: GitHub Repository Audit
+
+Audit an open-source project:
+
+```bash
+strix --target https://github.com/user/project --scan-mode deep
+```
+
+### Scenario 5: Localhost Development Testing
+
+Test your local development environment:
+
+```bash
+strix --target http://localhost:3000 \
+  --instruction "Test user: testuser@example.com / password123"
+```
+
+<Note>
+Strix automatically rewrites `localhost` URLs to work correctly inside Docker containers.
+</Note>
+
+## CI/CD Pipeline Examples
+
+### GitHub Actions
+
+```yaml
+name: Security Scan
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run Strix Scan
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          strix --target . --scan-mode quick --non-interactive
+```
+
+### GitLab CI
+
+```yaml
+security_scan:
+  stage: test
+  script:
+    - strix --target $CI_PROJECT_DIR --scan-mode quick --non-interactive
+  variables:
+    STRIX_LLM: "openai/gpt-4"
+    LLM_API_KEY: $LLM_API_KEY
+  only:
+    - merge_requests
+```
+
+### Jenkins
+
+```groovy
+stage('Security Scan') {
+    steps {
+        withCredentials([string(credentialsId: 'llm-api-key', variable: 'LLM_API_KEY')]) {
+            sh '''
+                export STRIX_LLM="openai/gpt-4"
+                strix --target . --scan-mode quick --non-interactive
+            '''
+        }
+    }
+}
+```
+
+## Troubleshooting
+
+### Check Version
+
+```bash
+strix --version
+```
+
+### Test Environment
+
+Verify environment variables are set:
+
+```bash
+echo $STRIX_LLM
+echo $LLM_API_KEY
+```
+
+### Verbose Output
+
+For debugging, you can examine the output directory:
+
+```bash
+strix --target example.com --non-interactive
+ls -la strix_runs/
+cat strix_runs/*/vulnerabilities.json
+```
+
+## See Also
+
+- [strix](/cli/strix) - Main command reference
+- [Options](/cli/options) - Complete option reference
+- [Non-Interactive Mode](/cli/non-interactive-mode) - Automation details
+- [Exit Codes](/cli/exit-codes) - Exit code reference

@@ -1,0 +1,207 @@
+---
+title: Basic Usage
+description: Learn the fundamentals of running Strix security assessments on your applications
+---
+
+Strix provides a simple, powerful CLI for running security assessments against your applications. You can test local codebases, GitHub repositories, web applications, domains, and IP addresses.
+
+## Your First Scan
+
+Run a basic security assessment by specifying a target:
+
+<CodeGroup>
+```bash Local codebase
+strix --target ./app-directory
+```
+
+```bash GitHub repository
+strix --target https://github.com/org/repo
+```
+
+```bash Web application
+strix --target https://your-app.com
+```
+
+```bash Domain or IP
+strix --target example.com
+strix --target 192.168.1.42
+```
+</CodeGroup>
+
+<Note>
+The `--target` flag (or `-t` for short) is required. Strix automatically detects the target type based on the format you provide.
+</Note>
+
+## Understanding the Output
+
+When you run Strix, you'll see a rich terminal interface (TUI) that displays:
+
+- Real-time progress of agent activities
+- Vulnerability discoveries as they're found
+- Detailed exploit validation results
+- Agent collaboration and coordination
+
+### Results Location
+
+All scan results are saved to a timestamped directory:
+
+```bash
+strix_runs/<run-name>/
+├── report.md           # Human-readable security report
+├── findings.json       # Structured vulnerability data
+├── proof-of-concepts/  # Exploit validation scripts
+└── logs/              # Detailed execution logs
+```
+
+<Note>
+First run automatically pulls the Strix Docker image. This only happens once and may take a few minutes.
+</Note>
+
+## Interactive vs Non-Interactive Mode
+
+Strix runs in two modes:
+
+### Interactive Mode (Default)
+
+Provides a real-time TUI with agent activity, findings, and detailed progress:
+
+```bash
+strix --target https://your-app.com
+```
+
+The TUI displays:
+- Live agent collaboration
+- Vulnerability findings as they're discovered
+- Attack surface mapping progress
+- Real-time exploit validation
+
+### Non-Interactive Mode
+
+Perfect for CI/CD pipelines, servers, and automated workflows:
+
+```bash
+strix -n --target https://your-app.com
+# or
+strix --non-interactive --target https://your-app.com
+```
+
+**Key characteristics:**
+- No TUI, prints findings to stdout
+- Exits automatically on completion
+- Returns exit code 2 if vulnerabilities are found
+- Returns exit code 0 if no vulnerabilities are found
+- Ideal for automation and scripting
+
+<CodeGroup>
+```bash Standard scan
+strix -n --target ./my-app
+```
+
+```bash CI/CD integration
+strix -n -t https://staging.example.com --scan-mode quick
+```
+</CodeGroup>
+
+## Target Types
+
+Strix automatically detects and handles different target types:
+
+### Local Code Analysis
+
+Test applications on your local filesystem:
+
+```bash
+strix --target ./my-project
+strix --target /absolute/path/to/app
+```
+
+### Repository Analysis
+
+Strix clones and analyzes GitHub repositories:
+
+<CodeGroup>
+```bash HTTPS URL
+strix --target https://github.com/user/repo
+```
+
+```bash SSH URL
+strix --target git@github.com:user/repo.git
+```
+</CodeGroup>
+
+The repository is cloned automatically and analyzed for security vulnerabilities.
+
+### Web Applications
+
+Black-box testing of deployed applications:
+
+```bash
+strix --target https://example.com
+strix --target http://localhost:3000
+```
+
+### Domains and IPs
+
+Infrastructure and network penetration testing:
+
+```bash
+strix --target example.com
+strix --target 192.168.1.42
+```
+
+## Common Usage Patterns
+
+### Quick Security Check
+
+Run a fast assessment for rapid feedback:
+
+```bash
+strix --target ./my-app --scan-mode quick
+```
+
+### Standard Development Testing
+
+Routine security testing during development:
+
+```bash
+strix --target https://staging.example.com --scan-mode standard
+```
+
+### Thorough Security Review
+
+Deep analysis before production deployment:
+
+```bash
+strix --target ./my-app --scan-mode deep
+```
+
+<Note>
+The default scan mode is `deep`, which provides the most comprehensive security assessment.
+</Note>
+
+## Version Information
+
+Check your installed Strix version:
+
+```bash
+strix --version
+# or
+strix -v
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Scan Modes" icon="gauge-high" href="/usage/scan-modes">
+    Learn about quick, standard, and deep scan modes
+  </Card>
+  <Card title="Custom Instructions" icon="message-lines" href="/usage/custom-instructions">
+    Guide Strix to focus on specific vulnerabilities
+  </Card>
+  <Card title="Multi-Target Testing" icon="bullseye-arrow" href="/usage/multi-target-testing">
+    Test multiple targets in a single scan
+  </Card>
+  <Card title="Advanced Testing" icon="flask" href="/usage/advanced-testing">
+    Authenticated testing and complex scenarios
+  </Card>
+</CardGroup>

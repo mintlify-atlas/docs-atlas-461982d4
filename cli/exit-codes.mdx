@@ -1,0 +1,534 @@
+---
+title: Exit Codes
+description: Understanding Strix exit codes for CI/CD integration and automation
+---
+
+Strix uses standard exit codes to indicate the result of a scan. Exit codes are only meaningful in [non-interactive mode](/cli/non-interactive-mode).
+
+## Overview
+
+In non-interactive mode, Strix returns different exit codes to indicate:
+
+- Success with no vulnerabilities found (0)
+- Errors during execution (1)  
+- Success with vulnerabilities found (2)
+
+This allows CI/CD pipelines to fail builds when security issues are discovered.
+
+## Exit Code Reference
+
+### Exit Code 0: Success - No Vulnerabilities
+
+```bash
+strix --target example.com --non-interactive
+echo $?  # Output: 0
+```
+
+**Meaning**: The scan completed successfully and no security vulnerabilities were found.
+
+**When this occurs**:
+- Scan completed without errors
+- All agents finished their work
+- No vulnerabilities were reported
+- Target appears secure
+
+**CI/CD usage**:
+```bash
+# Build passes
+strix --target . --scan-mode quick --non-interactive
+if [ $? -eq 0 ]; then
+  echo "✓ Security scan passed"
+  exit 0
+fi
+```
+
+### Exit Code 1: Error During Execution
+
+```bash
+strix --target example.com --non-interactive
+echo $?  # Output: 1
+```
+
+**Meaning**: An error occurred that prevented the scan from completing successfully.
+
+**Common causes**:
+
+<ParamField path="LLM Connection Failure" type="error">
+  Unable to connect to the language model provider.
+  
+  **Solutions**:
+  - Verify `STRIX_LLM` environment variable is set
+  - Check `LLM_API_KEY` is valid and not expired
+  - Verify network connectivity to LLM provider
+  - Check API rate limits and quotas
+  - Review LLM provider service status
+</ParamField>
+
+<ParamField path="Docker Error" type="error">
+  Docker daemon not running or Docker-related error.
+  
+  **Solutions**:
+  - Start Docker daemon: `sudo systemctl start docker`
+  - Verify Docker is installed: `docker --version`
+  - Check Docker permissions: add user to docker group
+  - Ensure Docker image can be pulled
+  - Check available disk space
+</ParamField>
+
+<ParamField path="Configuration Error" type="error">
+  Invalid configuration or missing required settings.
+  
+  **Solutions**:
+  - Verify all required environment variables are set
+  - Check custom config file syntax if using `--config`
+  - Ensure target is accessible and valid
+  - Review instruction file contents if using `--instruction-file`
+</ParamField>
+
+<ParamField path="Target Inaccessible" type="error">
+  Unable to reach or access the target.
+  
+  **Solutions**:
+  - Verify target URL is correct and accessible
+  - Check network connectivity
+  - Verify authentication if required
+  - Ensure target is running if testing localhost
+  - Check firewall rules
+</ParamField>
+
+<ParamField path="Unhandled Exception" type="error">
+  Unexpected error during execution.
+  
+  **Solutions**:
+  - Review error output in stderr
+  - Check scan logs in output directory
+  - Report bug if error appears to be in Strix
+  - Try running in interactive mode for more details
+</ParamField>
+
+**CI/CD usage**:
+```bash
+strix --target . --non-interactive 2>error.log
+if [ $? -eq 1 ]; then
+  echo "✗ Security scan failed"
+  cat error.log
+  exit 1
+fi
+```
+
+### Exit Code 2: Success - Vulnerabilities Found
+
+```bash
+strix --target example.com --non-interactive
+echo $?  # Output: 2
+```
+
+**Meaning**: The scan completed successfully and security vulnerabilities were discovered.
+
+**When this occurs**:
+- Scan completed without errors
+- All agents finished their work
+- At least one vulnerability was reported
+- Vulnerability reports saved to output directory
+
+**This is the key exit code for CI/CD integration** - it allows pipelines to fail builds when security issues are found.
+
+**CI/CD usage**:
+```bash
+# Fail build if vulnerabilities found
+strix --target . --scan-mode quick --non-interactive
+if [ $? -eq 2 ]; then
+  echo "✗ Security vulnerabilities found!"
+  echo "Review: strix_runs/*/vulnerabilities.md"
+  exit 1
+fi
+```
+
+## CI/CD Integration Examples
+
+### Basic Build Gate
+
+```bash
+#!/bin/bash
+
+echo "Running security scan..."
+strix --target . --scan-mode quick --non-interactive
+
+EXIT_CODE=$?
+
+case $EXIT_CODE in
+  0)
+    echo "✓ No vulnerabilities found"
+    exit 0
+    ;;
+  1)
+    echo "✗ Scan failed with error"
+    exit 1
+    ;;
+  2)
+    echo "✗ Vulnerabilities detected!"
+    echo "See scan results in strix_runs/"
+    exit 1
+    ;;
+esac
+```
+
+### GitHub Actions
+
+```yaml
+name: Security Scan
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run Strix Scan
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          pip install strix-agent
+          strix --target . --scan-mode quick --non-interactive
+        
+        # This step automatically fails if exit code is 1 or 2
+      
+      - name: Upload Results
+        if: failure()  # Run even if scan found vulnerabilities
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-scan-results
+          path: strix_runs/
+```
+
+### GitLab CI
+
+```yaml
+security_scan:
+  stage: test
+  script:
+    - pip install strix-agent
+    - strix --target $CI_PROJECT_DIR --scan-mode quick --non-interactive
+  
+  variables:
+    STRIX_LLM: "openai/gpt-4"
+    LLM_API_KEY: $LLM_API_KEY
+  
+  artifacts:
+    when: always
+    paths:
+      - strix_runs/
+  
+  # Job fails on exit code 1 or 2
+  allow_failure: false
+```
+
+### Jenkins
+
+```groovy
+pipeline {
+    agent any
+    
+    environment {
+        STRIX_LLM = 'openai/gpt-4'
+    }
+    
+    stages {
+        stage('Security Scan') {
+            steps {
+                script {
+                    def exitCode = sh(
+                        script: 'strix --target . --scan-mode quick --non-interactive',
+                        returnStatus: true
+                    )
+                    
+                    if (exitCode == 1) {
+                        error('Security scan failed with error')
+                    } else if (exitCode == 2) {
+                        error('Security vulnerabilities found')
+                    }
+                    // exitCode == 0 continues normally
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            archiveArtifacts artifacts: 'strix_runs/**/*', allowEmptyArchive: true
+        }
+    }
+}
+```
+
+### CircleCI
+
+```yaml
+version: 2.1
+
+jobs:
+  security_scan:
+    docker:
+      - image: python:3.11
+    
+    steps:
+      - checkout
+      
+      - setup_remote_docker
+      
+      - run:
+          name: Install Strix
+          command: pip install strix-agent
+      
+      - run:
+          name: Security Scan
+          command: |
+            strix --target . --scan-mode quick --non-interactive
+            
+            # Explicit exit code check
+            EXIT_CODE=$?
+            if [ $EXIT_CODE -eq 1 ]; then
+              echo "Scan error"
+              exit 1
+            elif [ $EXIT_CODE -eq 2 ]; then
+              echo "Vulnerabilities found"
+              exit 1
+            fi
+      
+      - store_artifacts:
+          path: strix_runs/
+```
+
+## Advanced Patterns
+
+### Warning Mode (Don't Fail Build)
+
+Allow vulnerabilities but warn:
+
+```bash
+strix --target . --non-interactive
+
+if [ $? -eq 2 ]; then
+  echo "⚠️  Warning: Security vulnerabilities found"
+  echo "Review reports in strix_runs/"
+  # Don't exit - continue build
+fi
+```
+
+### Severity-Based Gating
+
+Fail only on high/critical vulnerabilities:
+
+```bash
+strix --target . --non-interactive
+
+if [ $? -eq 2 ]; then
+  # Check severity of vulnerabilities
+  CRITICAL=$(jq '[.[] | select(.severity == "critical")] | length' strix_runs/*/vulnerabilities.json)
+  HIGH=$(jq '[.[] | select(.severity == "high")] | length' strix_runs/*/vulnerabilities.json)
+  
+  if [ $CRITICAL -gt 0 ] || [ $HIGH -gt 0 ]; then
+    echo "✗ Found $CRITICAL critical and $HIGH high severity vulnerabilities"
+    exit 1
+  else
+    echo "⚠️  Found only low/medium vulnerabilities - allowing build"
+    exit 0
+  fi
+fi
+```
+
+### Baseline Comparison
+
+Fail only if new vulnerabilities are found:
+
+```bash
+# Save baseline
+strix --target . --non-interactive
+cp strix_runs/latest/vulnerabilities.json baseline.json
+
+# Later: compare against baseline
+strix --target . --non-interactive
+
+if [ $? -eq 2 ]; then
+  # Compare current vs baseline
+  CURRENT_COUNT=$(jq 'length' strix_runs/latest/vulnerabilities.json)
+  BASELINE_COUNT=$(jq 'length' baseline.json)
+  
+  if [ $CURRENT_COUNT -gt $BASELINE_COUNT ]; then
+    NEW_VULNS=$((CURRENT_COUNT - BASELINE_COUNT))
+    echo "✗ Found $NEW_VULNS new vulnerabilities"
+    exit 1
+  else
+    echo "No new vulnerabilities (existing: $BASELINE_COUNT)"
+    exit 0
+  fi
+fi
+```
+
+### Conditional Scanning
+
+Run different scans based on branch:
+
+```bash
+#!/bin/bash
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+if [ "$BRANCH" = "main" ]; then
+  # Deep scan on main branch
+  echo "Running deep scan on main branch"
+  strix --target . --scan-mode deep --non-interactive
+else
+  # Quick scan on feature branches
+  echo "Running quick scan on feature branch"
+  strix --target . --scan-mode quick --non-interactive
+fi
+
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -eq 1 ]; then
+  echo "Scan failed"
+  exit 1
+elif [ $EXIT_CODE -eq 2 ]; then
+  # Strict on main, lenient on features
+  if [ "$BRANCH" = "main" ]; then
+    echo "Vulnerabilities not allowed on main branch"
+    exit 1
+  else
+    echo "Vulnerabilities found - review before merging"
+    exit 0
+  fi
+fi
+```
+
+## Exit Code in Interactive Mode
+
+In interactive mode (default), Strix does **not** use exit code 2 for vulnerabilities:
+
+```bash
+# Interactive mode
+strix --target example.com
+# Always exits with 0 (success) or 1 (error)
+# Never exits with 2, even if vulnerabilities found
+```
+
+This is because:
+- Interactive mode expects human supervision
+- User manually quits when ready
+- Vulnerabilities are shown in TUI during scan
+- Exit code 2 is specifically for automation
+
+## Troubleshooting
+
+### Exit Code 1 Every Time
+
+**Problem**: Scan always fails with exit code 1
+
+**Diagnosis**:
+```bash
+strix --target . --non-interactive 2>errors.log
+cat errors.log
+```
+
+**Common issues**:
+- Missing environment variables
+- LLM API key invalid or expired
+- Docker not running
+- Target not accessible
+- Network connectivity issues
+
+### Exit Code 0 When Vulnerabilities Expected
+
+**Problem**: Scan returns 0 but you expect vulnerabilities
+
+**Diagnosis**:
+```bash
+# Check scan output
+ls -la strix_runs/*/
+cat strix_runs/*/vulnerabilities.json
+
+# Run in interactive mode to see details
+strix --target . --scan-mode deep
+```
+
+**Possible reasons**:
+- Quick scan mode missed complex issues (try deep mode)
+- Target has good security posture
+- Scan needs more specific instructions
+- Agent didn't have enough time (check scan duration)
+
+### Can't Capture Exit Code
+
+**Problem**: Exit code always appears as 0 in shell script
+
+**Solutions**:
+```bash
+# Capture immediately after command
+strix --target . --non-interactive
+EXIT_CODE=$?
+echo "Exit code: $EXIT_CODE"
+
+# Don't run other commands before capturing
+# Wrong:
+strix --target . --non-interactive
+echo "Done"  # This resets $?
+EXIT_CODE=$?  # Now captures echo's exit code (0)
+```
+
+## Best Practices
+
+### Always Archive Results
+
+```yaml
+# GitHub Actions
+- name: Upload Results
+  if: always()  # Run even on failure
+  uses: actions/upload-artifact@v3
+  with:
+    name: security-results
+    path: strix_runs/
+```
+
+### Provide Clear Error Messages
+
+```bash
+strix --target . --non-interactive
+
+case $? in
+  0) echo "✓ Security scan passed - no vulnerabilities found" ;;
+  1) echo "✗ Security scan failed - check logs for errors" ; exit 1 ;;
+  2) 
+    echo "✗ Security vulnerabilities detected:"
+    jq -r '.[] | "  - [\(.severity | ascii_upcase)] \(.title)"' strix_runs/*/vulnerabilities.json
+    exit 1
+    ;;
+esac
+```
+
+### Use Non-Zero Exit for Both Errors and Vulnerabilities
+
+```bash
+# Treat both exit code 1 and 2 as failures
+strix --target . --non-interactive || exit 1
+```
+
+### Set Timeouts
+
+```yaml
+# GitHub Actions
+- name: Security Scan
+  timeout-minutes: 30  # Prevent hanging builds
+  run: strix --target . --scan-mode quick --non-interactive
+```
+
+## See Also
+
+- [Non-Interactive Mode](/cli/non-interactive-mode) - Automation guide
+- [Examples](/cli/examples) - CI/CD integration examples
+- [Reports](/cli/reports) - Output format reference

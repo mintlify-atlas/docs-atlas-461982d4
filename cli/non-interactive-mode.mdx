@@ -1,0 +1,528 @@
+---
+title: Non-Interactive Mode
+description: Running Strix in headless mode for CI/CD pipelines and automation
+---
+
+Non-interactive mode runs Strix without the TUI interface, making it ideal for automation, CI/CD pipelines, and scripting.
+
+## Overview
+
+Enable non-interactive mode with the `--non-interactive` or `-n` flag:
+
+```bash
+strix --target https://example.com --non-interactive
+```
+
+## Behavior
+
+In non-interactive mode:
+
+### No TUI
+
+- No text-based user interface is displayed
+- Output is printed directly to stdout/stderr
+- Suitable for terminal sessions without advanced features
+
+### Automatic Exit
+
+- Process exits automatically when scan completes
+- No manual intervention required
+- Returns appropriate exit codes
+
+### Vulnerability Display
+
+- Vulnerabilities are printed to stdout in real-time as they're found
+- Each vulnerability is displayed in a formatted panel
+- Full details are also saved to output directory
+
+### Progress Indicators
+
+- Live status panel shows scan progress
+- Updates every 2 seconds
+- Shows statistics: duration, agents, tools, vulnerabilities
+
+## Exit Codes
+
+Non-interactive mode uses exit codes to indicate scan results:
+
+<ParamField path="0" type="exit code">
+  **Success - No vulnerabilities found**
+  
+  The scan completed successfully and no security issues were discovered.
+  
+  ```bash
+  strix --target example.com --non-interactive
+  echo $?  # Output: 0
+  ```
+</ParamField>
+
+<ParamField path="1" type="exit code">
+  **Error during execution**
+  
+  An error occurred that prevented the scan from completing:
+  - LLM connection failure
+  - Docker error
+  - Configuration error
+  - Unhandled exception
+  
+  ```bash
+  strix --target example.com --non-interactive
+  echo $?  # Output: 1
+  ```
+</ParamField>
+
+<ParamField path="2" type="exit code">
+  **Success - Vulnerabilities found**
+  
+  The scan completed successfully and security vulnerabilities were discovered.
+  
+  This allows CI/CD pipelines to fail builds when vulnerabilities are found.
+  
+  ```bash
+  strix --target example.com --non-interactive
+  echo $?  # Output: 2
+  ```
+</ParamField>
+
+See [Exit Codes](/cli/exit-codes) for more details.
+
+## Output Format
+
+### Startup Banner
+
+When starting, you'll see:
+
+```
+╔══════════════════════════════════════════╗
+║ STRIX                                    ║
+║ Penetration test initiated               ║
+║                                          ║
+║ Target  https://example.com              ║
+║ Output  strix_runs/example_20260301_1234║
+║                                          ║
+║ Vulnerabilities will be displayed in     ║
+║ real-time.                               ║
+╚══════════════════════════════════════════╝
+```
+
+### Progress Updates
+
+During the scan, a live status panel updates:
+
+```
+╔══════════════════════════════════════════╗
+║ STRIX                                    ║
+║ Penetration test in progress             ║
+║                                          ║
+║ Duration         5m 23s                  ║
+║ Active agents    2                       ║
+║ Tools executed   24                      ║
+║ Vulnerabilities  1                       ║
+╚══════════════════════════════════════════╝
+```
+
+### Vulnerability Notifications
+
+When a vulnerability is found, it's immediately printed:
+
+```
+╔══════════════════════════════════════════╗
+║ VULN-A3F8B2E1                            ║
+║                                          ║
+║ SQL Injection in Search Endpoint         ║
+║                                          ║
+║ Severity  CRITICAL                       ║
+║ CVSS      9.8                            ║
+║ Target    https://example.com            ║
+║ Endpoint  /api/search                    ║
+║ Method    GET                            ║
+║                                          ║
+║ Description                              ║
+║ The search parameter is vulnerable to    ║
+║ SQL injection, allowing attackers to     ║
+║ extract database contents.               ║
+║                                          ║
+║ Impact                                   ║
+║ Complete database compromise including   ║
+║ user credentials and sensitive data.     ║
+╚══════════════════════════════════════════╝
+```
+
+### Completion Summary
+
+When the scan finishes:
+
+```
+╔══════════════════════════════════════════╗
+║ STRIX                                    ║
+║ Penetration test summary                 ║
+║                                          ║
+║ [Agent's natural language summary]       ║
+╚══════════════════════════════════════════╝
+
+╔══════════════════════════════════════════╗
+║ STRIX                                    ║
+║ Penetration test completed               ║
+║                                          ║
+║ Target  https://example.com              ║
+║                                          ║
+║ Vulnerabilities  3 found                 ║
+║ Duration         12m 34s                 ║
+║ Tools executed   47                      ║
+║                                          ║
+║ Output  strix_runs/example_20260301_1234║
+╚══════════════════════════════════════════╝
+
+models.strix.ai  ·  discord.gg/strix-ai
+```
+
+## CI/CD Integration
+
+### Basic Usage
+
+Fail the build if vulnerabilities are found:
+
+```bash
+strix --target https://example.com --non-interactive
+if [ $? -eq 2 ]; then
+  echo "Security vulnerabilities found! Failing build."
+  exit 1
+fi
+```
+
+### GitHub Actions
+
+```yaml
+name: Security Scan
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Run Strix Security Scan
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          pip install strix-agent
+          strix --target . --scan-mode quick --non-interactive
+      
+      - name: Upload scan results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: strix-results
+          path: strix_runs/
+```
+
+### GitLab CI
+
+```yaml
+security_scan:
+  stage: test
+  image: python:3.11
+  
+  before_script:
+    - pip install strix-agent
+  
+  script:
+    - strix --target $CI_PROJECT_DIR --scan-mode quick --non-interactive
+  
+  variables:
+    STRIX_LLM: "openai/gpt-4"
+    LLM_API_KEY: $LLM_API_KEY
+  
+  artifacts:
+    when: always
+    paths:
+      - strix_runs/
+    expire_in: 30 days
+  
+  only:
+    - merge_requests
+    - main
+```
+
+### Jenkins
+
+```groovy
+pipeline {
+    agent any
+    
+    environment {
+        STRIX_LLM = 'openai/gpt-4'
+        LLM_API_KEY = credentials('llm-api-key')
+    }
+    
+    stages {
+        stage('Security Scan') {
+            steps {
+                sh '''
+                    pip install strix-agent
+                    strix --target . --scan-mode quick --non-interactive
+                '''
+            }
+        }
+    }
+    
+    post {
+        always {
+            archiveArtifacts artifacts: 'strix_runs/**/*', allowEmptyArchive: true
+        }
+        failure {
+            echo 'Security vulnerabilities found or scan failed'
+        }
+    }
+}
+```
+
+### CircleCI
+
+```yaml
+version: 2.1
+
+jobs:
+  security_scan:
+    docker:
+      - image: python:3.11
+    
+    steps:
+      - checkout
+      
+      - setup_remote_docker:
+          version: 20.10.14
+      
+      - run:
+          name: Install Strix
+          command: pip install strix-agent
+      
+      - run:
+          name: Run Security Scan
+          command: strix --target . --scan-mode quick --non-interactive
+          environment:
+            STRIX_LLM: openai/gpt-4
+      
+      - store_artifacts:
+          path: strix_runs/
+          destination: security-results
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - security_scan:
+          context: strix-credentials
+```
+
+## Advanced Usage
+
+### Scan Multiple Targets
+
+```bash
+strix --target ./source-code \
+  --target https://staging.example.com \
+  --target https://prod.example.com \
+  --non-interactive
+```
+
+### Quick CI/CD Scan
+
+```bash
+strix --target . \
+  --scan-mode quick \
+  --instruction "Focus on new code changes" \
+  --non-interactive
+```
+
+### Deep Pre-Release Audit
+
+```bash
+strix --target https://staging.example.com \
+  --scan-mode deep \
+  --instruction-file ./security-requirements.md \
+  --non-interactive
+```
+
+### Capture All Output
+
+```bash
+strix --target example.com --non-interactive > scan-output.txt 2>&1
+```
+
+### Parse JSON Results
+
+After the scan, parse the JSON output:
+
+```bash
+strix --target example.com --non-interactive
+
+# Check for critical vulnerabilities
+jq '.[] | select(.severity == "critical")' strix_runs/*/vulnerabilities.json
+
+# Count vulnerabilities by severity
+jq 'group_by(.severity) | map({severity: .[0].severity, count: length})' strix_runs/*/vulnerabilities.json
+```
+
+## Environment Variables
+
+Non-interactive mode requires the same environment variables as interactive mode:
+
+### Required
+
+```bash
+export STRIX_LLM="openai/gpt-4"
+```
+
+### Optional
+
+```bash
+export LLM_API_KEY="your-api-key-here"
+export LLM_API_BASE="https://api.openai.com/v1"
+export PERPLEXITY_API_KEY="your-perplexity-key"
+export STRIX_REASONING_EFFORT="high"
+```
+
+## Output Directory
+
+Results are saved to `strix_runs/<run_name>/`:
+
+```
+strix_runs/example_20260301_123456/
+├── vulnerabilities.json      # Machine-readable vulnerability data
+├── vulnerabilities.md         # Human-readable vulnerability reports
+├── scan_metadata.json         # Scan configuration and metadata
+├── agent_traces.json          # Agent execution traces
+└── tool_executions.json       # Tool call history
+```
+
+See [Reports](/cli/reports) for details on file formats.
+
+## Logging and Debugging
+
+### Standard Output
+
+All scan information goes to stdout:
+
+```bash
+strix --target example.com --non-interactive 2>/dev/null
+```
+
+### Error Output
+
+Errors and warnings go to stderr:
+
+```bash
+strix --target example.com --non-interactive 2>errors.log
+```
+
+### Capture Everything
+
+```bash
+strix --target example.com --non-interactive &> full-output.log
+```
+
+## Comparison with Interactive Mode
+
+| Feature | Non-Interactive | Interactive |
+|---------|----------------|-------------|
+| TUI Display | No | Yes |
+| Auto-exit | Yes | No |
+| Exit code 2 for vulns | Yes | No |
+| Real-time vulnerability display | Yes (stdout) | Yes (TUI panel) |
+| Agent interaction | No | Yes |
+| Progress updates | Live panel | Full TUI |
+| CI/CD friendly | Yes | No |
+| Resource usage | Lower | Higher |
+| Suitable for | Automation, scripts, CI/CD | Human supervision, development |
+
+## Troubleshooting
+
+### Exit Code Always 1
+
+**Problem**: Scan always exits with code 1
+
+**Possible causes**:
+- LLM connection failure - check API key and network
+- Docker not running - start Docker daemon
+- Invalid configuration - verify environment variables
+- Missing required flags - ensure `--target` is provided
+
+### No Output Displayed
+
+**Problem**: Scan runs but produces no output
+
+**Solutions**:
+- Wait - LLM initialization can take 30-60 seconds
+- Check that stdout isn't being redirected unexpectedly
+- Verify Docker containers are running: `docker ps`
+- Check logs in output directory
+
+### Scan Exits Before Completion
+
+**Problem**: Scan exits early without finding vulnerabilities
+
+**Solutions**:
+- Check for errors in stderr: `strix ... 2>errors.log`
+- Verify target is accessible from Docker containers
+- Review scan metadata in output directory
+- Try running in interactive mode to see detailed logs
+
+## Best Practices
+
+### For CI/CD
+
+1. **Use quick scan mode** for faster feedback:
+   ```bash
+   strix --target . --scan-mode quick --non-interactive
+   ```
+
+2. **Archive results** as build artifacts for later review
+
+3. **Set reasonable timeouts** in your CI configuration
+
+4. **Use specific instructions** to focus on recent changes:
+   ```bash
+   strix --target . --instruction "Focus on authentication module" --non-interactive
+   ```
+
+### For Scripts
+
+1. **Check exit codes** to handle different scenarios:
+   ```bash
+   strix --target example.com --non-interactive
+   case $? in
+     0) echo "No vulnerabilities found" ;;
+     1) echo "Scan failed" ; exit 1 ;;
+     2) echo "Vulnerabilities found" ; exit 1 ;;
+   esac
+   ```
+
+2. **Capture output** for processing:
+   ```bash
+   strix --target example.com --non-interactive > results.txt
+   ```
+
+3. **Parse JSON reports** for automation:
+   ```bash
+   jq -r '.[] | "\(.severity): \(.title)"' strix_runs/*/vulnerabilities.json
+   ```
+
+## See Also
+
+- [Interactive Mode](/cli/interactive-mode) - TUI features
+- [Exit Codes](/cli/exit-codes) - Exit code reference
+- [Reports](/cli/reports) - Output file formats
+- [Examples](/cli/examples) - Usage examples

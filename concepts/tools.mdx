@@ -1,0 +1,622 @@
+---
+title: Tools
+description: Capabilities available to Strix agents for security testing
+---
+
+Tools are the actions agents can take to interact with targets, analyze code, manipulate data, and coordinate testing. Each tool is a registered function that agents can invoke through the LLM interface.
+
+## Tool Architecture
+
+Tools are registered using the `@register_tool` decorator:
+
+```python
+# From strix/tools/registry.py
+from strix.tools.registry import register_tool
+
+@register_tool
+def terminal_execute(
+    command: str,
+    timeout: float | None = None,
+    terminal_id: str | None = None,
+) -> dict[str, Any]:
+    """Execute a shell command in the sandbox terminal."""
+    manager = get_terminal_manager()
+    return manager.execute_command(command, timeout, terminal_id)
+```
+
+Tools can specify:
+- `sandbox_execution=True` (default): Execute in sandbox
+- `sandbox_execution=False`: Execute locally in CLI
+
+### Tool Discovery
+
+Agents discover tools through XML schemas:
+
+```xml
+<terminal_tools>
+  <tool name="terminal_execute">
+    <description>
+      Execute a shell command in the sandbox terminal.
+      Returns command output, exit code, and working directory.
+    </description>
+    <parameters>
+      <parameter name="command" type="string" required="true">
+        The shell command to execute (e.g., "ls -la", "curl https://api.com")
+      </parameter>
+      <parameter name="timeout" type="float" required="false">
+        Execution timeout in seconds (default: 120)
+      </parameter>
+    </parameters>
+  </tool>
+</terminal_tools>
+```
+
+These schemas are injected into the agent's system prompt, allowing the LLM to understand what tools are available and how to use them.
+
+## Core Tool Categories
+
+Strix provides tools organized by capability:
+
+### Terminal
+
+Execute shell commands in the sandbox:
+
+```python
+# From strix/tools/terminal/terminal_actions.py
+@register_tool
+def terminal_execute(
+    command: str,
+    is_input: bool = False,
+    timeout: float | None = None,
+    terminal_id: str | None = None,
+    no_enter: bool = False,
+) -> dict[str, Any]:
+    """Execute commands with persistent terminal sessions."""
+```
+
+**Use cases:**
+- Running security scanners (`nmap`, `sqlmap`, `nuclei`)
+- Code analysis (`grep`, `find`, `git log`)
+- API testing (`curl`, `httpie`)
+- Custom exploit scripts
+
+**Example:**
+```json
+{
+  "tool": "terminal_execute",
+  "arguments": {
+    "command": "curl -X POST https://api.example.com/login -d '{\"user\":\"admin'\"}'",
+    "timeout": 30
+  }
+}
+```
+
+### Browser
+
+Control a headless browser for web application testing:
+
+```python
+# From strix/tools/browser/browser_actions.py
+@register_tool
+def browser_action(
+    action: BrowserAction,  # launch, goto, click, type, scroll, etc.
+    url: str | None = None,
+    coordinate: str | None = None,  # Format: "x,y"
+    text: str | None = None,
+    tab_id: str | None = None,
+    js_code: str | None = None,
+) -> dict[str, Any]:
+    """Perform browser actions with screenshot feedback."""
+```
+
+**Available actions:**
+- `launch`: Start browser (with optional URL)
+- `goto`: Navigate to URL
+- `click`: Click element at coordinates
+- `type`: Type text into focused element
+- `scroll_down` / `scroll_up`: Scroll page
+- `execute_js`: Run JavaScript code
+- `new_tab` / `switch_tab` / `close_tab`: Tab management
+- `save_pdf`: Capture page as PDF
+- `get_console_logs`: Retrieve console messages
+- `view_source`: Get page HTML source
+
+**Example workflow:**
+```python
+# Launch browser and navigate
+browser_action(action="launch", url="https://example.com")
+
+# Click login button at coordinates
+browser_action(action="click", coordinate="500,300")
+
+# Type username
+browser_action(action="type", text="admin")
+
+# Execute JavaScript to extract data
+browser_action(
+    action="execute_js",
+    js_code="return document.cookie"
+)
+```
+
+<Note>
+Every browser action returns a screenshot (base64 encoded) showing the current page state, enabling visual feedback for agents.
+</Note>
+
+### File Operations
+
+Read, write, and edit files in the workspace:
+
+```python
+# From strix/tools/file_edit/file_edit_actions.py
+@register_tool
+def read_file(
+    file_path: str,
+    start_line: int | None = None,
+    end_line: int | None = None,
+) -> dict[str, Any]:
+    """Read file contents with optional line range."""
+
+@register_tool
+def write_file(
+    file_path: str,
+    content: str,
+    mode: str = "overwrite",  # overwrite | append
+) -> dict[str, Any]:
+    """Write content to file."""
+
+@register_tool
+def edit_file(
+    file_path: str,
+    old_content: str,
+    new_content: str,
+    occurrence: int = 1,
+) -> dict[str, Any]:
+    """Edit file by replacing specific content."""
+```
+
+**Use cases:**
+- Analyzing source code for vulnerabilities
+- Creating exploit scripts
+- Modifying payloads or configurations
+- Extracting secrets from config files
+
+### Proxy
+
+Interact with the Caido proxy for HTTP/HTTPS traffic analysis:
+
+```python
+# From strix/tools/proxy/proxy_actions.py
+@register_tool
+def proxy_search(
+    query: str,
+    limit: int = 50,
+) -> dict[str, Any]:
+    """Search proxy history with filters."""
+
+@register_tool
+def proxy_replay(
+    request_id: str,
+    modifications: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Replay HTTP request with optional modifications."""
+
+@register_tool
+def proxy_get_request(
+    request_id: str,
+) -> dict[str, Any]:
+    """Get full request/response details."""
+```
+
+**Use cases:**
+- Finding authentication tokens in traffic
+- Replaying requests with modified parameters
+- Analyzing API endpoints and data flows
+- Detecting sensitive data in responses
+
+**Example:**
+```python
+# Search for authentication endpoints
+proxy_search(query="path:/login OR path:/auth", limit=10)
+
+# Replay login request with SQL injection
+proxy_replay(
+    request_id="req_abc123",
+    modifications={
+        "body": {"username": "admin'--", "password": "anything"}
+    }
+)
+```
+
+### Python Execution
+
+Run Python code in the sandbox:
+
+```python
+# From strix/tools/python/python_actions.py
+@register_tool
+def python_execute(
+    code: str,
+    timeout: float | None = None,
+) -> dict[str, Any]:
+    """Execute Python code with security libraries available."""
+```
+
+**Available libraries:**
+- `requests`, `httpx` - HTTP clients
+- `beautifulsoup4`, `lxml` - HTML parsing
+- `jwt`, `cryptography` - Security operations
+- `sqlparse` - SQL parsing
+- `pycryptodome` - Cryptographic operations
+
+**Example:**
+```python
+python_execute(code="""
+import jwt
+import json
+
+# Decode JWT without verification to inspect claims
+token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+header = jwt.get_unverified_header(token)
+payload = jwt.decode(token, options={"verify_signature": False})
+
+print(json.dumps({"header": header, "payload": payload}, indent=2))
+""")
+```
+
+### Agent Coordination
+
+Create and manage sub-agents:
+
+```python
+# From strix/tools/agents_graph/agents_graph_actions.py
+@register_tool
+def create_agent(
+    task: str,
+    name: str,
+    skills: str | None = None,  # Comma-separated skill names
+    inherit_messages: bool = False,
+) -> dict[str, Any]:
+    """Create a specialized sub-agent for a specific task."""
+
+@register_tool
+def send_message_to_agent(
+    recipient_agent_id: str,
+    message: str,
+    message_type: str = "information",
+    priority: str = "normal",
+) -> dict[str, Any]:
+    """Send message to another agent."""
+
+@register_tool
+def agent_finish(
+    result: str,
+    success: bool = True,
+) -> dict[str, Any]:
+    """Complete sub-agent task and report back to parent."""
+```
+
+**Example:**
+```python
+# Create specialized agent for GraphQL testing
+create_agent(
+    task="Test all GraphQL mutations for authorization bypasses",
+    name="GraphQL Security Tester",
+    skills="broken_function_level_authorization,idor,graphql",
+    inherit_messages=False
+)
+
+# Send findings to parent
+send_message_to_agent(
+    recipient_agent_id="agent_parent123",
+    message="Found IDOR in updateUser mutation - any user can modify any profile",
+    message_type="information",
+    priority="high"
+)
+```
+
+### Vulnerability Reporting
+
+Create structured security findings:
+
+```python
+# From strix/tools/reporting/reporting_actions.py
+@register_tool
+def create_vulnerability_report(
+    title: str,
+    description: str,
+    impact: str,
+    target: str,
+    technical_analysis: str,
+    poc_description: str,
+    poc_script_code: str,  # REQUIRED: Actual exploit code
+    remediation_steps: str,
+    cvss_breakdown: str,  # XML format with CVSS metrics
+    endpoint: str | None = None,
+    method: str | None = None,
+    cve: str | None = None,
+    cwe: str | None = None,
+    code_locations: str | None = None,  # XML format
+) -> dict[str, Any]:
+    """Create vulnerability report with automatic CVSS calculation."""
+```
+
+**Example:**
+```python
+create_vulnerability_report(
+    title="SQL Injection in User Search",
+    description="The search parameter is directly interpolated into SQL query",
+    impact="Attackers can extract entire database including passwords and PII",
+    target="https://api.example.com/users/search",
+    endpoint="/users/search",
+    method="POST",
+    cwe="CWE-89",
+    technical_analysis="""
+    The backend constructs SQL query using string concatenation:
+    
+    query = f"SELECT * FROM users WHERE name LIKE '%{search_term}%'"
+    
+    This allows SQL injection through the search_term parameter.
+    """,
+    poc_description="Send POST request with SQL injection payload in search parameter",
+    poc_script_code="""
+    curl -X POST https://api.example.com/users/search \
+      -H 'Content-Type: application/json' \
+      -d '{"search": "' UNION SELECT username,password,email FROM users--"}'
+    """,
+    remediation_steps="""
+    1. Use parameterized queries or ORM with parameter binding
+    2. Validate and sanitize all user input
+    3. Implement least-privilege database access
+    4. Add Web Application Firewall rules
+    """,
+    cvss_breakdown="""
+    <cvss>
+      <attack_vector>N</attack_vector>
+      <attack_complexity>L</attack_complexity>
+      <privileges_required>N</privileges_required>
+      <user_interaction>N</user_interaction>
+      <scope>U</scope>
+      <confidentiality>H</confidentiality>
+      <integrity>H</integrity>
+      <availability>N</availability>
+    </cvss>
+    """,
+    code_locations="""
+    <code_locations>
+      <location>
+        <file>src/api/users.py</file>
+        <start_line>145</start_line>
+        <end_line>147</end_line>
+        <snippet>
+query = f"SELECT * FROM users WHERE name LIKE '%{search_term}%'"
+cursor.execute(query)
+results = cursor.fetchall()
+        </snippet>
+      </location>
+    </code_locations>
+    """
+)
+```
+
+<Info>
+The reporting tool automatically:
+- Calculates CVSS score from metrics
+- Checks for duplicate findings
+- Validates required fields and formats
+- Extracts CVE/CWE identifiers from text
+</Info>
+
+### Thinking & Notes
+
+Internal tools for agent reasoning:
+
+```python
+@register_tool(sandbox_execution=False)
+def think(
+    thought: str,
+) -> dict[str, Any]:
+    """Record reasoning and planning (not shown to user)."""
+
+@register_tool(sandbox_execution=False)
+def note(
+    content: str,
+    category: str = "general",
+) -> dict[str, Any]:
+    """Save important information for later reference."""
+```
+
+**Use cases:**
+- Planning testing strategy
+- Recording discovered credentials or endpoints
+- Tracking hypotheses and next steps
+
+### TODO Management
+
+Track tasks and progress:
+
+```python
+@register_tool(sandbox_execution=False)
+def todo_create(
+    title: str,
+    description: str | None = None,
+) -> dict[str, Any]:
+    """Create a new task."""
+
+@register_tool(sandbox_execution=False)
+def todo_update(
+    todo_id: str,
+    status: str,  # pending | in_progress | completed | cancelled
+) -> dict[str, Any]:
+    """Update task status."""
+```
+
+### Scan Control
+
+Finish the scan and return results:
+
+```python
+# From strix/tools/finish/finish_actions.py
+@register_tool(sandbox_execution=False)
+def finish_scan(
+    summary: str,
+    total_findings: int = 0,
+) -> dict[str, Any]:
+    """Complete the scan (root agent only)."""
+```
+
+## Tool Execution Modes
+
+### Sandbox Execution
+
+Most tools execute in the sandbox for isolation:
+
+```python
+# From strix/tools/executor.py
+async def _execute_tool_in_sandbox(tool_name: str, agent_state, **kwargs):
+    server_url = await runtime.get_sandbox_url(
+        agent_state.sandbox_id,
+        agent_state.sandbox_info["tool_server_port"]
+    )
+    
+    # Send HTTP request to tool server in sandbox
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{server_url}/execute",
+            json={"tool_name": tool_name, "kwargs": kwargs},
+            headers={"Authorization": f"Bearer {agent_state.sandbox_token}"},
+            timeout=SANDBOX_EXECUTION_TIMEOUT,
+        )
+```
+
+Sandbox tools include:
+- `terminal_execute`
+- `browser_action`
+- `read_file`, `write_file`, `edit_file`
+- `proxy_search`, `proxy_replay`
+- `python_execute`
+
+### Local Execution
+
+Some tools run in the CLI for performance or security:
+
+```python
+@register_tool(sandbox_execution=False)
+def create_agent(...):
+    # Runs locally to manage agent lifecycle
+```
+
+Local tools include:
+- `create_agent`, `send_message_to_agent`
+- `create_vulnerability_report`
+- `think`, `note`
+- `todo_create`, `todo_update`
+- `finish_scan`, `agent_finish`
+
+## Tool Output Format
+
+All tools return structured dictionaries:
+
+```python
+# Success case
+{
+    "success": True,
+    "output": "command output here",
+    "exit_code": 0,
+    "working_dir": "/workspace"
+}
+
+# Error case
+{
+    "success": False,
+    "error": "File not found: config.json",
+    "details": {...}
+}
+```
+
+Agent LLMs receive these results as XML in the conversation:
+
+```xml
+<tool_result name="terminal_execute">
+  <success>true</success>
+  <output>
+    total 48
+    drwxr-xr-x 3 agent agent 4096 Mar 1 10:30 src
+    drwxr-xr-x 2 agent agent 4096 Mar 1 10:25 tests
+    -rw-r--r-- 1 agent agent 1234 Mar 1 10:20 package.json
+  </output>
+  <exit_code>0</exit_code>
+</tool_result>
+```
+
+## Web Search (Optional)
+
+If Perplexity API key is configured:
+
+```python
+@register_tool(sandbox_execution=False)
+def web_search(
+    query: str,
+    search_type: str = "general",  # general | vulnerability | exploit
+) -> dict[str, Any]:
+    """Search the web for security information."""
+```
+
+Enable with:
+```bash
+export PERPLEXITY_API_KEY="pplx-..."
+strix scan --target https://app.com
+```
+
+## Custom Tools
+
+You can register custom tools:
+
+```python
+from strix.tools.registry import register_tool
+
+@register_tool
+def my_custom_tool(
+    param1: str,
+    param2: int = 10,
+) -> dict[str, Any]:
+    """My custom security testing tool."""
+    # Tool implementation
+    return {
+        "success": True,
+        "result": "custom result"
+    }
+```
+
+Create an XML schema file for the tool in `~/.strix/tools/custom/`:
+
+```xml
+<tool name="my_custom_tool">
+  <description>My custom security testing tool</description>
+  <parameters>
+    <parameter name="param1" type="string" required="true">
+      Description of param1
+    </parameter>
+    <parameter name="param2" type="integer" required="false">
+      Description of param2 (default: 10)
+    </parameter>
+  </parameters>
+</tool>
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Skills" icon="book" href="/concepts/skills">
+    Learn how skills enhance agent capabilities
+  </Card>
+  <Card title="Agents" icon="robot" href="/concepts/agents">
+    Understand agent architecture
+  </Card>
+  <Card title="How It Works" icon="diagram" href="/concepts/how-it-works">
+    See the full execution flow
+  </Card>
+  <Card title="Vulnerability Detection" icon="shield-check" href="/concepts/vulnerability-detection">
+    Explore security testing patterns
+  </Card>
+</CardGroup>

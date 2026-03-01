@@ -1,0 +1,309 @@
+---
+title: Config File
+description: Understand and manage the Strix configuration file for persistent settings
+---
+
+Strix automatically saves your environment variables to a configuration file at `~/.strix/cli-config.json`. This allows you to configure Strix once and have your settings persist across runs.
+
+## Location
+
+The default configuration file is located at:
+
+```
+~/.strix/cli-config.json
+```
+
+You can override this location using the `--config` flag:
+
+```bash
+strix --target ./app --config /path/to/custom-config.json
+```
+
+## File Format
+
+The configuration file uses JSON format and stores environment variables in an `env` object:
+
+```json
+{
+  "env": {
+    "STRIX_LLM": "openai/gpt-5",
+    "LLM_API_KEY": "sk-...",
+    "PERPLEXITY_API_KEY": "pplx-...",
+    "STRIX_REASONING_EFFORT": "high",
+    "STRIX_SANDBOX_EXECUTION_TIMEOUT": "120"
+  }
+}
+```
+
+## How It Works
+
+### Automatic Saving
+
+When you run Strix with environment variables set, they are automatically saved to the config file:
+
+```bash
+# First run - set environment variables
+export STRIX_LLM="openai/gpt-5"
+export LLM_API_KEY="sk-..."
+strix --target ./app
+
+# Configuration is now saved to ~/.strix/cli-config.json
+# Future runs don't need environment variables
+strix --target ./app
+```
+
+### Automatic Loading
+
+On subsequent runs, Strix automatically loads saved configuration:
+
+1. Strix reads `~/.strix/cli-config.json`
+2. Applies saved variables if they're not already set in the environment
+3. Uses environment variables if they're set (they take precedence)
+
+### Configuration Priority
+
+Strix uses this priority order for configuration:
+
+1. **Environment variables** - Highest priority
+2. **Custom config file** (via `--config`) - Overrides default config
+3. **Default config file** (`~/.strix/cli-config.json`) - Lowest priority
+
+## Managing Configuration
+
+### View Current Configuration
+
+To see your saved configuration, read the file:
+
+```bash
+cat ~/.strix/cli-config.json
+```
+
+Or use `jq` for pretty printing:
+
+```bash
+jq . ~/.strix/cli-config.json
+```
+
+### Update Configuration
+
+You can update configuration in two ways:
+
+#### Method 1: Set Environment Variables
+
+Set new environment variables and run Strix. They will be automatically saved:
+
+```bash
+export STRIX_LLM="anthropic/claude-sonnet-4-6"
+strix --target ./app
+```
+
+#### Method 2: Edit Config File Directly
+
+Edit `~/.strix/cli-config.json` manually:
+
+```bash
+nano ~/.strix/cli-config.json
+```
+
+```json
+{
+  "env": {
+    "STRIX_LLM": "anthropic/claude-sonnet-4-6",
+    "LLM_API_KEY": "sk-ant-...",
+    "STRIX_REASONING_EFFORT": "medium"
+  }
+}
+```
+
+<Warning>
+  Make sure the config file has correct JSON syntax. Invalid JSON will cause the configuration to be ignored.
+</Warning>
+
+### Clear Configuration
+
+To remove a specific variable, set it to an empty string:
+
+```bash
+export STRIX_LLM=""
+strix --target ./app
+```
+
+This removes `STRIX_LLM` from the saved configuration.
+
+To clear all configuration, delete the file:
+
+```bash
+rm ~/.strix/cli-config.json
+```
+
+### Validate Configuration
+
+Strix validates the configuration file on startup. If the file is corrupted or invalid, Strix will:
+
+1. Log a warning
+2. Ignore the invalid configuration
+3. Use environment variables or defaults
+
+## Security Considerations
+
+### File Permissions
+
+The config file is automatically created with restricted permissions (`0600` on Unix-like systems):
+
+```bash
+-rw-------  1 user  user  256 Mar 01 12:00 cli-config.json
+```
+
+This ensures that only you can read the file, protecting your API keys.
+
+### Storing Secrets
+
+While the config file is convenient, consider these alternatives for sensitive data:
+
+1. **Environment variables** - Don't persist to disk
+2. **Secret management tools** - Use tools like 1Password, AWS Secrets Manager
+3. **CI/CD secrets** - Use GitHub Secrets, GitLab CI/CD variables
+
+### Avoid Committing Config Files
+
+Never commit your config file to version control:
+
+```bash
+# Add to .gitignore
+echo ".strix/" >> .gitignore
+```
+
+## Custom Config Files
+
+### Using Custom Locations
+
+You can use a custom config file location with the `--config` flag:
+
+```bash
+strix --target ./app --config /path/to/project-config.json
+```
+
+This is useful for:
+- Project-specific configurations
+- Team-shared configurations (without secrets)
+- CI/CD environments
+
+### Template Example
+
+Create a team config template without secrets:
+
+```json
+{
+  "env": {
+    "STRIX_LLM": "openai/gpt-5",
+    "STRIX_REASONING_EFFORT": "medium",
+    "STRIX_SANDBOX_EXECUTION_TIMEOUT": "180",
+    "STRIX_DISABLE_BROWSER": "false"
+  }
+}
+```
+
+Team members can copy this and add their API keys:
+
+```bash
+cp team-config.json ~/.strix/cli-config.json
+# Edit and add LLM_API_KEY
+nano ~/.strix/cli-config.json
+```
+
+## Tracked Variables
+
+Strix automatically tracks and saves these environment variables:
+
+### LLM Configuration
+- `STRIX_LLM`
+- `LLM_API_KEY`
+- `LLM_API_BASE`
+- `OPENAI_API_BASE`
+- `LITELLM_BASE_URL`
+- `OLLAMA_API_BASE`
+- `STRIX_REASONING_EFFORT`
+- `STRIX_LLM_MAX_RETRIES`
+- `STRIX_MEMORY_COMPRESSOR_TIMEOUT`
+- `LLM_TIMEOUT`
+
+### Tool Configuration
+- `PERPLEXITY_API_KEY`
+- `STRIX_DISABLE_BROWSER`
+
+### Runtime Configuration
+- `STRIX_IMAGE`
+- `STRIX_RUNTIME_BACKEND`
+- `STRIX_SANDBOX_EXECUTION_TIMEOUT`
+- `STRIX_SANDBOX_CONNECT_TIMEOUT`
+
+### Telemetry
+- `STRIX_TELEMETRY`
+
+<Note>
+  `DOCKER_HOST` is not tracked in the config file. It should be set as an environment variable if needed.
+</Note>
+
+## Special Behaviors
+
+### LLM Config Re-validation
+
+LLM-related variables (`STRIX_LLM`, `LLM_API_KEY`, etc.) are re-validated on each run:
+
+- If you change these variables in your environment, Strix uses the new values
+- The saved configuration is updated with the new values
+- This ensures your LLM config is always up to date
+
+### Custom Config Override
+
+When using `--config`, Strix:
+
+1. Does not automatically save changes to the custom config file
+2. Uses the custom config file as read-only
+3. Still respects environment variables (they take precedence)
+
+This prevents accidental modification of team or project configs.
+
+## Troubleshooting
+
+### Config Not Loading
+
+If your saved config isn't being used:
+
+1. Check file permissions: `ls -la ~/.strix/cli-config.json`
+2. Validate JSON syntax: `jq . ~/.strix/cli-config.json`
+3. Ensure environment variables aren't overriding saved values
+4. Check for typos in variable names
+
+### Config File Corruption
+
+If the config file is corrupted:
+
+```bash
+# Backup the file
+cp ~/.strix/cli-config.json ~/.strix/cli-config.json.bak
+
+# Delete and recreate
+rm ~/.strix/cli-config.json
+export STRIX_LLM="openai/gpt-5"
+export LLM_API_KEY="sk-..."
+strix --target ./app
+```
+
+### Permission Denied
+
+If you see permission errors:
+
+```bash
+# Fix permissions
+chmod 600 ~/.strix/cli-config.json
+
+# Fix ownership (if needed)
+chown $USER ~/.strix/cli-config.json
+```
+
+## See Also
+
+- [Environment Variables](/configuration/environment-variables)
+- [LLM Providers](/configuration/llm-providers)
+- [Docker Settings](/configuration/docker-settings)

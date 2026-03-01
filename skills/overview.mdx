@@ -1,0 +1,84 @@
+---
+title: Skills Overview
+description: Learn how Strix skills enhance agents with specialized security testing knowledge
+---
+
+Skills are specialized knowledge packages that enhance Strix agents with deep expertise in specific vulnerability types, technologies, and testing methodologies. Each skill provides advanced techniques, practical examples, and validation methods that go beyond baseline security knowledge.
+
+## How Skills Work
+
+When you create an agent, Strix can load up to 5 specialized skills relevant to the specific subtask and context:
+
+```python
+# Agent creation with specialized skills
+create_agent(
+    task="Test authentication mechanisms in API",
+    name="Auth Specialist",
+    skills="authentication_jwt,business_logic"
+)
+```
+
+The skills are dynamically injected into the agent's system prompt, allowing it to operate with deep expertise tailored to the specific vulnerability types or technologies required for the task at hand.
+
+## Skill Categories
+
+Strix organizes skills into several categories to help you find the right expertise for your testing needs:
+
+<CardGroup cols={2}>
+  <Card title="Vulnerabilities" icon="shield-exclamation" href="/skills/vulnerabilities">
+    Advanced testing techniques for core vulnerability classes like authentication bypasses, business logic flaws, and race conditions
+  </Card>
+  <Card title="Frameworks" icon="code" href="/skills/frameworks">
+    Specific testing methods for popular frameworks like Django, Express, FastAPI, and Next.js
+  </Card>
+  <Card title="Technologies" icon="server" href="/skills/technologies">
+    Specialized techniques for third-party services such as Supabase, Firebase, Auth0, and payment gateways
+  </Card>
+  <Card title="Protocols" icon="network-wired">
+    Protocol-specific testing patterns for GraphQL, WebSocket, OAuth, and other communication standards
+  </Card>
+  <Card title="Cloud" icon="cloud">
+    Cloud provider security testing for AWS, Azure, GCP, and Kubernetes environments
+  </Card>
+  <Card title="Reconnaissance" icon="radar">
+    Advanced information gathering and enumeration techniques for comprehensive attack surface mapping
+  </Card>
+</CardGroup>
+
+## What Makes a Good Skill?
+
+A well-designed skill typically includes:
+
+- **Advanced techniques** - Non-obvious methods specific to the task and domain
+- **Practical examples** - Working payloads, commands, or test cases with variations
+- **Validation methods** - How to confirm findings and avoid false positives
+- **Context-specific insights** - Environment and version nuances, configuration-dependent behavior, and edge cases
+- **YAML frontmatter** - `name` and `description` fields for skill metadata
+
+Skills focus on deep, specialized knowledge to significantly enhance agent capabilities. They are dynamically injected into agent context when needed.
+
+## Available Skills
+
+Strix currently includes skills across multiple categories:
+
+**Vulnerabilities**: authentication_jwt, broken_function_level_authorization, business_logic, csrf, idor, information_disclosure, insecure_file_uploads, mass_assignment, open_redirect, path_traversal_lfi_rfi, race_conditions, rce, sql_injection, ssrf, subdomain_takeover, xss, xxe
+
+**Frameworks**: fastapi, nextjs
+
+**Technologies**: firebase_firestore, supabase
+
+**Protocols**: graphql
+
+You can explore each category to learn more about the available skills and when to use them.
+
+## Creating Your Own Skills
+
+You can extend Strix's capabilities by creating custom skills tailored to your specific testing scenarios. See the [Creating Skills](/skills/creating-skills) guide to learn how to build and contribute skills.
+
+## Contributing
+
+Community contributions are welcome. You can contribute new skills via [pull requests](https://github.com/usestrix/strix/pulls) or [GitHub issues](https://github.com/usestrix/strix/issues) to help expand the collection and improve extensibility for Strix agents.
+
+<Note>
+The skills collection is actively expanding with specialized techniques and new categories.
+</Note>

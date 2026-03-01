@@ -1,0 +1,510 @@
+---
+title: Reports
+description: Understanding Strix output files and vulnerability report formats
+---
+
+Strix generates comprehensive reports in multiple formats for both human review and automated processing.
+
+## Output Directory Structure
+
+Each scan creates a timestamped directory in `strix_runs/`:
+
+```
+strix_runs/
+└── example_20260301_123456/
+    ├── vulnerabilities.json          # Machine-readable vulnerability data
+    ├── vulnerabilities.md             # Human-readable vulnerability reports  
+    ├── scan_metadata.json             # Scan configuration and metadata
+    ├── agent_traces.json              # Agent execution traces
+    └── tool_executions.json           # Tool call history
+```
+
+### Run Name Format
+
+Run names follow the pattern: `<target>_<date>_<time>`
+
+```
+example_com_20260301_123456
+github_user_repo_20260301_140530
+multi_target_20260301_153245
+```
+
+## Vulnerability Reports
+
+### JSON Format (vulnerabilities.json)
+
+Machine-readable format for automated processing:
+
+```json
+[
+  {
+    "id": "vuln-a3f8b2e1",
+    "timestamp": "2026-03-01T12:34:56Z",
+    "title": "SQL Injection in Search Endpoint",
+    "severity": "critical",
+    "cvss": 9.8,
+    "cvss_breakdown": {
+      "attack_vector": "N",
+      "attack_complexity": "L",
+      "privileges_required": "N",
+      "user_interaction": "N",
+      "scope": "U",
+      "confidentiality": "H",
+      "integrity": "H",
+      "availability": "H"
+    },
+    "target": "https://example.com",
+    "endpoint": "/api/search",
+    "method": "GET",
+    "description": "The search parameter is vulnerable to SQL injection...",
+    "impact": "Complete database compromise including user credentials...",
+    "technical_analysis": "The application concatenates user input directly...",
+    "poc_description": "Send a GET request to /api/search with a malicious query parameter...",
+    "poc_script_code": "import requests\n\npayload = \"' OR '1'='1\"\nresponse = requests.get(...)",
+    "remediation_steps": "1. Use parameterized queries\n2. Implement input validation...",
+    "cve": "CVE-2024-12345",
+    "cwe": "CWE-89",
+    "code_locations": [
+      {
+        "file": "src/api/search.py",
+        "start_line": 42,
+        "end_line": 45,
+        "snippet": "query = f\"SELECT * FROM users WHERE name = '{user_input}'\"\nresults = db.execute(query)",
+        "label": "Vulnerable SQL query construction",
+        "fix_before": "query = f\"SELECT * FROM users WHERE name = '{user_input}'\"",
+        "fix_after": "query = \"SELECT * FROM users WHERE name = ?\"\nresults = db.execute(query, (user_input,))"
+      }
+    ]
+  }
+]
+```
+
+### Markdown Format (vulnerabilities.md)
+
+Human-readable format for documentation and issue tracking:
+
+```markdown
+# SQL Injection in Search Endpoint
+
+**ID:** vuln-a3f8b2e1
+**Severity:** CRITICAL
+**Found:** 2026-03-01T12:34:56Z
+**Agent:** Web Scanner
+**Target:** https://example.com
+**Endpoint:** /api/search
+**Method:** GET
+**CVE:** CVE-2024-12345
+**CWE:** CWE-89
+**CVSS:** 9.8
+**CVSS Vector:** AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
+
+## Description
+
+The search parameter is vulnerable to SQL injection, allowing attackers to 
+execute arbitrary SQL commands against the database.
+
+## Impact
+
+Complete database compromise including extraction of user credentials, 
+sensitive data, and potential for data modification or deletion.
+
+## Technical Analysis
+
+The application concatenates user input directly into SQL queries without 
+proper sanitization or parameterization. This allows attackers to break out 
+of the intended query context and execute arbitrary SQL.
+
+## Proof of Concept
+
+Send a GET request to /api/search with a malicious query parameter:
+
+```python
+import requests
+
+payload = "' OR '1'='1"
+response = requests.get(
+    "https://example.com/api/search",
+    params={"q": payload}
+)
+print(response.json())
+```
+
+## Code Analysis
+
+**Location 1:** `src/api/search.py` (lines 42-45)
+
+Vulnerable SQL query construction
+
+```python
+query = f"SELECT * FROM users WHERE name = '{user_input}'"
+results = db.execute(query)
+```
+
+**Suggested Fix:**
+```diff
+- query = f"SELECT * FROM users WHERE name = '{user_input}'"
++ query = "SELECT * FROM users WHERE name = ?"
++ results = db.execute(query, (user_input,))
+```
+
+## Remediation
+
+1. Use parameterized queries or prepared statements
+2. Implement input validation and sanitization
+3. Apply principle of least privilege to database accounts
+4. Enable query logging and monitoring
+5. Conduct regular security audits
+
+---
+```
+
+## Scan Metadata
+
+### scan_metadata.json
+
+Contains scan configuration and summary:
+
+```json
+{
+  "scan_id": "example_20260301_123456",
+  "run_name": "example_20260301_123456",
+  "start_time": "2026-03-01T12:34:56Z",
+  "end_time": "2026-03-01T12:47:30Z",
+  "duration_seconds": 754,
+  "scan_mode": "deep",
+  "interactive": false,
+  "targets": [
+    {
+      "type": "web_url",
+      "original": "https://example.com",
+      "details": {
+        "target_url": "https://example.com",
+        "workspace_subdir": "target_0"
+      }
+    }
+  ],
+  "user_instructions": "Focus on authentication vulnerabilities",
+  "scan_completed": true,
+  "vulnerabilities_found": 3,
+  "agents_spawned": 5,
+  "tools_executed": 47,
+  "model": "openai/gpt-4",
+  "strix_version": "1.0.0"
+}
+```
+
+## Agent Traces
+
+### agent_traces.json
+
+Detailed log of all agent activity:
+
+```json
+{
+  "agent-abc123": {
+    "id": "agent-abc123",
+    "name": "Web Scanner",
+    "parent_id": null,
+    "status": "completed",
+    "start_time": "2026-03-01T12:35:00Z",
+    "end_time": "2026-03-01T12:46:30Z",
+    "iterations": 143,
+    "messages": [
+      {
+        "id": "msg-1",
+        "timestamp": "2026-03-01T12:35:01Z",
+        "role": "assistant",
+        "content": "I'll begin by mapping the application's attack surface..."
+      }
+    ],
+    "vulnerabilities_found": 2
+  }
+}
+```
+
+## Tool Executions
+
+### tool_executions.json
+
+Complete history of tool invocations:
+
+```json
+{
+  "exec-xyz789": {
+    "id": "exec-xyz789",
+    "agent_id": "agent-abc123",
+    "tool_name": "http_request",
+    "timestamp": "2026-03-01T12:35:15Z",
+    "args": {
+      "url": "https://example.com/api/search",
+      "method": "GET",
+      "params": {"q": "test"}
+    },
+    "result": {
+      "status_code": 200,
+      "body": "..."
+    },
+    "duration_ms": 234,
+    "status": "completed"
+  }
+}
+```
+
+## Vulnerability Fields Reference
+
+### Required Fields
+
+<ParamField path="id" type="string">
+  Unique identifier for the vulnerability (e.g., `vuln-a3f8b2e1`)
+</ParamField>
+
+<ParamField path="timestamp" type="string">
+  ISO 8601 timestamp when vulnerability was discovered
+</ParamField>
+
+<ParamField path="title" type="string">
+  Brief, descriptive title of the vulnerability
+</ParamField>
+
+<ParamField path="severity" type="string">
+  Severity level: `critical`, `high`, `medium`, `low`, or `info`
+</ParamField>
+
+<ParamField path="cvss" type="number">
+  CVSS v3.1 base score (0.0 - 10.0)
+</ParamField>
+
+<ParamField path="target" type="string">
+  The target where the vulnerability was found
+</ParamField>
+
+<ParamField path="description" type="string">
+  Detailed description of the vulnerability
+</ParamField>
+
+<ParamField path="impact" type="string">
+  Potential impact and consequences of exploitation
+</ParamField>
+
+<ParamField path="technical_analysis" type="string">
+  Technical details about the vulnerability
+</ParamField>
+
+<ParamField path="poc_description" type="string">
+  Description of how to reproduce the vulnerability
+</ParamField>
+
+<ParamField path="poc_script_code" type="string">
+  Actual exploit code or payload demonstrating the vulnerability
+</ParamField>
+
+<ParamField path="remediation_steps" type="string">
+  Step-by-step instructions to fix the vulnerability
+</ParamField>
+
+### CVSS Breakdown
+
+<ParamField path="cvss_breakdown" type="object">
+  CVSS v3.1 metric breakdown:
+  
+  - `attack_vector`: `N` (Network), `A` (Adjacent), `L` (Local), `P` (Physical)
+  - `attack_complexity`: `L` (Low), `H` (High)
+  - `privileges_required`: `N` (None), `L` (Low), `H` (High)
+  - `user_interaction`: `N` (None), `R` (Required)
+  - `scope`: `U` (Unchanged), `C` (Changed)
+  - `confidentiality`: `N` (None), `L` (Low), `H` (High)
+  - `integrity`: `N` (None), `L` (Low), `H` (High)
+  - `availability`: `N` (None), `L` (Low), `H` (High)
+</ParamField>
+
+### Optional Fields
+
+<ParamField path="endpoint" type="string">
+  Specific endpoint or path where vulnerability exists
+</ParamField>
+
+<ParamField path="method" type="string">
+  HTTP method (GET, POST, etc.) or operation type
+</ParamField>
+
+<ParamField path="cve" type="string">
+  CVE identifier if applicable (e.g., `CVE-2024-12345`)
+</ParamField>
+
+<ParamField path="cwe" type="string">
+  CWE identifier (e.g., `CWE-89`)
+</ParamField>
+
+<ParamField path="code_locations" type="array">
+  Array of code locations relevant to the vulnerability. Each location contains:
+  
+  - `file` - Relative path to file
+  - `start_line` - Starting line number
+  - `end_line` - Ending line number  
+  - `snippet` - Code snippet showing the issue
+  - `label` - Description of this location
+  - `fix_before` - Original vulnerable code
+  - `fix_after` - Suggested fixed code
+</ParamField>
+
+## Severity Levels
+
+Strix uses standard severity classifications:
+
+| Severity | CVSS Range | Description |
+|----------|------------|-------------|
+| **Critical** | 9.0 - 10.0 | Immediate threat requiring urgent remediation |
+| **High** | 7.0 - 8.9 | Significant risk requiring prompt remediation |
+| **Medium** | 4.0 - 6.9 | Moderate risk requiring planned remediation |
+| **Low** | 0.1 - 3.9 | Minor risk with limited impact |
+| **Info** | 0.0 | Informational finding without direct security impact |
+
+## Processing Reports
+
+### Parse JSON with jq
+
+```bash
+# Count vulnerabilities by severity
+jq 'group_by(.severity) | map({severity: .[0].severity, count: length})' \
+  strix_runs/*/vulnerabilities.json
+
+# Extract all critical vulnerabilities
+jq '.[] | select(.severity == "critical")' \
+  strix_runs/*/vulnerabilities.json
+
+# Get vulnerability titles and CVSS scores
+jq -r '.[] | "\(.cvss) - \(.title)"' \
+  strix_runs/*/vulnerabilities.json | sort -rn
+
+# Export to CSV
+jq -r '["Severity","CVSS","Title"], (.[] | [.severity, .cvss, .title]) | @csv' \
+  strix_runs/*/vulnerabilities.json > vulnerabilities.csv
+```
+
+### Parse with Python
+
+```python
+import json
+from pathlib import Path
+
+# Load vulnerabilities
+with open('strix_runs/example_20260301_123456/vulnerabilities.json') as f:
+    vulns = json.load(f)
+
+# Count by severity
+from collections import Counter
+severity_counts = Counter(v['severity'] for v in vulns)
+print(f"Critical: {severity_counts['critical']}")
+print(f"High: {severity_counts['high']}")
+
+# Filter high-severity issues
+high_severity = [v for v in vulns if v['cvss'] >= 7.0]
+for vuln in high_severity:
+    print(f"{vuln['cvss']:.1f} - {vuln['title']}")
+
+# Export to GitHub Issues format
+for vuln in vulns:
+    title = f"[Security] {vuln['title']}"
+    body = f"""
+## {vuln['severity'].upper()} - CVSS {vuln['cvss']}
+
+{vuln['description']}
+
+### Impact
+{vuln['impact']}
+
+### Remediation
+{vuln['remediation_steps']}
+    """
+    # Create GitHub issue via API
+    # ...
+```
+
+### Import to Jira
+
+```python
+import json
+from jira import JIRA
+
+# Connect to Jira
+jira = JIRA('https://your-instance.atlassian.net', basic_auth=('email', 'token'))
+
+# Load vulnerabilities
+with open('strix_runs/example_20260301_123456/vulnerabilities.json') as f:
+    vulns = json.load(f)
+
+# Create issues
+for vuln in vulns:
+    issue_dict = {
+        'project': {'key': 'SEC'},
+        'summary': vuln['title'],
+        'description': f"""
+Severity: {vuln['severity'].upper()}
+CVSS Score: {vuln['cvss']}
+Target: {vuln['target']}
+
+{vuln['description']}
+
+IMPACT:
+{vuln['impact']}
+
+REMEDIATION:
+{vuln['remediation_steps']}
+        """,
+        'issuetype': {'name': 'Bug'},
+        'priority': {'name': 'Critical' if vuln['severity'] == 'critical' else 'High'},
+        'labels': ['security', 'strix', vuln['severity']]
+    }
+    jira.create_issue(fields=issue_dict)
+```
+
+## Best Practices
+
+### Archive Results
+
+Archive scan results for compliance and historical tracking:
+
+```bash
+# Create archive
+tar -czf strix-scan-$(date +%Y%m%d).tar.gz strix_runs/
+
+# Archive with metadata
+tar -czf strix-scan-example-$(date +%Y%m%d).tar.gz \
+  strix_runs/example_*/ \
+  --transform 's|strix_runs/||'
+```
+
+### Version Control Integration
+
+Commit vulnerability reports for tracking:
+
+```bash
+# Copy to tracked directory
+mkdir -p security-reports
+cp strix_runs/latest/vulnerabilities.md security-reports/$(date +%Y-%m-%d).md
+git add security-reports/
+git commit -m "Security scan results $(date +%Y-%m-%d)"
+```
+
+### Automated Reporting
+
+Generate summary reports:
+
+```bash
+#!/bin/bash
+LATEST_SCAN=$(ls -t strix_runs/ | head -1)
+
+echo "# Security Scan Report - $(date)" > report.md
+echo "" >> report.md
+
+jq -r '.[] | "- [\(.severity | ascii_upcase)] \(.title) (CVSS \(.cvss))"' \
+  "strix_runs/$LATEST_SCAN/vulnerabilities.json" >> report.md
+
+# Email or post to Slack
+```
+
+## See Also
+
+- [Vulnerability Format](/cli/vulnerability-format) - Detailed field descriptions
+- [Exit Codes](/cli/exit-codes) - Exit code reference
+- [Examples](/cli/examples) - Usage examples

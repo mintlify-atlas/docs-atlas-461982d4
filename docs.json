@@ -1,122 +1,159 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Strix",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#dc2626",
+    "light": "#ef4444",
+    "dark": "#991b1b"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/usestrix/strix"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/usestrix/strix",
+      "discord": "https://discord.gg/strix-ai",
+      "x": "https://x.com/strix_ai"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
+              "introduction",
               "quickstart",
-              "development"
+              "installation"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Concepts",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "concepts/how-it-works",
+              "concepts/agents",
+              "concepts/tools",
+              "concepts/skills",
+              "concepts/vulnerability-detection"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Usage",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "usage/basic-usage",
+              "usage/advanced-testing",
+              "usage/scan-modes",
+              "usage/custom-instructions",
+              "usage/multi-target-testing"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Skills",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "skills/overview",
+              "skills/vulnerabilities",
+              "skills/frameworks",
+              "skills/technologies",
+              "skills/creating-skills"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/ci-cd",
+              "integrations/github-actions",
+              "integrations/gitlab-ci",
+              "integrations/docker"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment-variables",
+              "configuration/llm-providers",
+              "configuration/config-file",
+              "configuration/docker-settings"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "CLI Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Commands",
             "pages": [
-              "api-reference/introduction"
+              "cli/strix",
+              "cli/options",
+              "cli/examples"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Modes",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "cli/interactive-mode",
+              "cli/non-interactive-mode",
+              "cli/scan-modes"
+            ]
+          },
+          {
+            "group": "Output",
+            "pages": [
+              "cli/reports",
+              "cli/vulnerability-format",
+              "cli/exit-codes"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Python API",
+        "groups": [
+          {
+            "group": "Core",
+            "pages": [
+              "api/agents",
+              "api/tools",
+              "api/runtime",
+              "api/llm"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "api/config",
+              "api/state"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Resources",
+        "groups": [
+          {
+            "group": "Community",
+            "pages": [
+              "resources/contributing",
+              "resources/faq",
+              "resources/troubleshooting",
+              "resources/changelog"
+            ]
+          },
+          {
+            "group": "Security",
+            "pages": [
+              "resources/responsible-use",
+              "resources/security-policy"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

@@ -1,0 +1,359 @@
+---
+title: 'Runtime API'
+description: 'Manage sandboxed execution environments'
+icon: 'container-storage'
+---
+
+## Overview
+
+The Runtime API manages Docker-based sandboxed environments for secure tool execution. Each agent runs in an isolated container with its own filesystem and network.
+
+## Getting the Runtime
+
+### get_runtime
+
+```python
+from strix.runtime import get_runtime
+
+runtime = get_runtime() -> AbstractRuntime
+```
+
+Returns the global runtime instance based on configuration.
+
+<ResponseField name="return" type="AbstractRuntime">
+  Runtime instance (currently DockerRuntime)
+</ResponseField>
+
+**Example:**
+```python
+from strix.runtime import get_runtime
+
+runtime = get_runtime()
+print(f"Runtime backend: {type(runtime).__name__}")
+```
+
+## AbstractRuntime
+
+Base interface for runtime implementations.
+
+### create_sandbox
+
+```python
+async def create_sandbox(
+    agent_id: str,
+    existing_token: str | None = None,
+    local_sources: list[dict[str, str]] | None = None
+) -> SandboxInfo
+```
+
+Creates or retrieves a sandboxed environment.
+
+<ParamField path="agent_id" type="str" required>
+  Unique identifier for the agent
+</ParamField>
+
+<ParamField path="existing_token" type="str | None">
+  Authentication token to reuse
+</ParamField>
+
+<ParamField path="local_sources" type="list[dict[str, str]] | None">
+  Local directories to mount in the sandbox
+  
+  <Expandable title="local_sources format">
+    Each dictionary should contain:
+    - `source_path`: Local directory path
+    - `workspace_subdir`: Optional subdirectory name in /workspace
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="SandboxInfo">
+  Sandbox information dictionary
+  
+  <Expandable title="SandboxInfo fields">
+    <ResponseField name="workspace_id" type="str">
+      Container ID
+    </ResponseField>
+    
+    <ResponseField name="api_url" type="str">
+      Tool server API URL
+    </ResponseField>
+    
+    <ResponseField name="auth_token" type="str | None">
+      Authentication token
+    </ResponseField>
+    
+    <ResponseField name="tool_server_port" type="int">
+      Host port for tool server
+    </ResponseField>
+    
+    <ResponseField name="caido_port" type="int">
+      Host port for Caido proxy
+    </ResponseField>
+    
+    <ResponseField name="agent_id" type="str">
+      Agent identifier
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+**Example:**
+```python
+import asyncio
+from strix.runtime import get_runtime
+
+async def main():
+    runtime = get_runtime()
+    
+    sandbox = await runtime.create_sandbox(
+        agent_id="agent_abc123",
+        local_sources=[{
+            "source_path": "/path/to/local/code",
+            "workspace_subdir": "target"
+        }]
+    )
+    
+    print(f"Container ID: {sandbox['workspace_id']}")
+    print(f"API URL: {sandbox['api_url']}")
+    print(f"Token: {sandbox['auth_token'][:10]}...")
+
+asyncio.run(main())
+```
+
+### get_sandbox_url
+
+```python
+async def get_sandbox_url(
+    container_id: str,
+    port: int
+) -> str
+```
+
+Returns the host-accessible URL for a container port.
+
+<ParamField path="container_id" type="str" required>
+  Docker container ID
+</ParamField>
+
+<ParamField path="port" type="int" required>
+  Container port number
+</ParamField>
+
+<ResponseField name="return" type="str">
+  Accessible URL (e.g., "http://127.0.0.1:49152")
+</ResponseField>
+
+### destroy_sandbox
+
+```python
+async def destroy_sandbox(container_id: str) -> None
+```
+
+Stops and removes a sandbox container.
+
+<ParamField path="container_id" type="str" required>
+  Container ID to destroy
+</ParamField>
+
+**Example:**
+```python
+await runtime.destroy_sandbox("container_id_here")
+```
+
+### cleanup
+
+```python
+def cleanup() -> None
+```
+
+Cleans up runtime resources asynchronously.
+
+## DockerRuntime
+
+Docker-based runtime implementation.
+
+### Configuration
+
+Configure via environment variables:
+
+```bash
+export STRIX_RUNTIME_BACKEND=docker
+export STRIX_IMAGE=ghcr.io/usestrix/strix-sandbox:0.1.12
+export STRIX_SANDBOX_EXECUTION_TIMEOUT=120
+export STRIX_SANDBOX_CONNECT_TIMEOUT=10
+```
+
+### Container Features
+
+The Docker sandbox provides:
+
+- **Isolated filesystem** - Each container has `/workspace` for file operations
+- **Network access** - Containers can make external HTTP requests
+- **Tool server** - Built-in HTTP server for executing tools
+- **Caido proxy** - Integrated proxy for HTTP traffic analysis
+- **Security** - Runs as non-root user with limited capabilities
+
+### Container Lifecycle
+
+Containers are shared across agents in the same scan:
+
+1. First agent creates the container
+2. Subsequent agents reuse the same container
+3. Local sources are copied only once
+4. Container persists until explicitly destroyed or cleanup
+
+**Example:**
+```python
+from strix.runtime import get_runtime
+import asyncio
+
+async def main():
+    runtime = get_runtime()
+    
+    # Create sandbox for first agent
+    sandbox1 = await runtime.create_sandbox("agent_001")
+    
+    # Same container reused for second agent
+    sandbox2 = await runtime.create_sandbox("agent_002")
+    
+    assert sandbox1["workspace_id"] == sandbox2["workspace_id"]
+    
+    # Cleanup when done
+    await runtime.destroy_sandbox(sandbox1["workspace_id"])
+
+asyncio.run(main())
+```
+
+## Exceptions
+
+### SandboxInitializationError
+
+```python
+from strix.runtime import SandboxInitializationError
+
+class SandboxInitializationError(Exception):
+    def __init__(
+        message: str,
+        details: str | None = None
+    )
+```
+
+Raised when sandbox creation or initialization fails.
+
+<ParamField path="message" type="str" required>
+  Error message
+</ParamField>
+
+<ParamField path="details" type="str | None">
+  Additional error details
+</ParamField>
+
+**Example:**
+```python
+from strix.runtime import get_runtime, SandboxInitializationError
+
+try:
+    runtime = get_runtime()
+    sandbox = await runtime.create_sandbox("agent_123")
+except SandboxInitializationError as e:
+    print(f"Failed to initialize sandbox: {e.message}")
+    if e.details:
+        print(f"Details: {e.details}")
+```
+
+## Cleanup
+
+### cleanup_runtime
+
+```python
+from strix.runtime import cleanup_runtime
+
+cleanup_runtime() -> None
+```
+
+Cleans up the global runtime instance and all containers.
+
+**Example:**
+```python
+from strix.runtime import cleanup_runtime
+import atexit
+
+# Register cleanup on exit
+atexit.register(cleanup_runtime)
+```
+
+## Advanced Usage
+
+### Custom Local Sources
+
+```python
+import asyncio
+from strix.runtime import get_runtime
+
+async def scan_local_app():
+    runtime = get_runtime()
+    
+    sandbox = await runtime.create_sandbox(
+        agent_id="scanner_001",
+        local_sources=[
+            {
+                "source_path": "/path/to/webapp",
+                "workspace_subdir": "webapp"
+            },
+            {
+                "source_path": "/path/to/configs",
+                "workspace_subdir": "configs"
+            }
+        ]
+    )
+    
+    # Files now available at:
+    # /workspace/webapp/
+    # /workspace/configs/
+    
+    return sandbox
+
+asyncio.run(scan_local_app())
+```
+
+### Accessing Container Services
+
+```python
+import httpx
+
+# Access tool server
+tool_server_url = f"{sandbox['api_url']}/execute"
+
+async with httpx.AsyncClient() as client:
+    response = await client.post(
+        tool_server_url,
+        json={
+            "agent_id": "agent_123",
+            "tool_name": "terminal_execute",
+            "kwargs": {"command": "ls /workspace"}
+        },
+        headers={"Authorization": f"Bearer {sandbox['auth_token']}"}
+    )
+    print(response.json())
+```
+
+## Environment Variables
+
+<ParamField path="STRIX_RUNTIME_BACKEND" type="str" default="'docker'">
+  Runtime backend to use (currently only "docker" supported)
+</ParamField>
+
+<ParamField path="STRIX_IMAGE" type="str" default="'ghcr.io/usestrix/strix-sandbox:0.1.12'">
+  Docker image for sandboxes
+</ParamField>
+
+<ParamField path="STRIX_SANDBOX_EXECUTION_TIMEOUT" type="str" default="'120'">
+  Tool execution timeout in seconds
+</ParamField>
+
+<ParamField path="STRIX_SANDBOX_CONNECT_TIMEOUT" type="str" default="'10'">
+  Connection timeout in seconds
+</ParamField>
+
+<ParamField path="DOCKER_HOST" type="str" default="None">
+  Custom Docker host URL (e.g., "tcp://192.168.1.100:2376")
+</ParamField>

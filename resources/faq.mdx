@@ -1,0 +1,413 @@
+---
+title: Frequently Asked Questions
+description: Common questions and answers about using Strix for security testing
+---
+
+Find answers to commonly asked questions about Strix, from setup and configuration to advanced usage and troubleshooting.
+
+## General
+
+<AccordionGroup>
+  <Accordion title="What is Strix?">
+    Strix is an open-source autonomous AI security testing platform that acts like real hackers. It runs your code dynamically, finds vulnerabilities, and validates them through actual proof-of-concepts.
+
+    Unlike traditional static analysis tools, Strix:
+    - Executes real attacks to validate findings
+    - Uses LLM-powered agents that think like security researchers
+    - Provides comprehensive reports with reproduction steps
+    - Can automatically generate fixes for discovered vulnerabilities
+  </Accordion>
+
+  <Accordion title="How is Strix different from traditional security scanners?">
+    Traditional scanners rely on pattern matching and static analysis, leading to high false positive rates. Strix uses autonomous AI agents that:
+
+    - **Think contextually** - Understand your application's logic and architecture
+    - **Validate findings** - Prove vulnerabilities exist with working exploits
+    - **Adapt dynamically** - Learn from responses and adjust testing strategies
+    - **Test comprehensively** - Cover business logic, not just known vulnerability patterns
+  </Accordion>
+
+  <Accordion title="What types of vulnerabilities can Strix detect?">
+    Strix can identify and validate a wide range of security issues:
+
+    - **Access Control** - IDOR, privilege escalation, authorization bypass
+    - **Injection** - SQL, NoSQL, command injection, XSS
+    - **Server-Side** - SSRF, XXE, deserialization, path traversal
+    - **Authentication** - JWT vulnerabilities, session management flaws
+    - **Business Logic** - Race conditions, workflow manipulation
+    - **Infrastructure** - Misconfigurations, exposed services, subdomain takeover
+
+    See the [Skills documentation](/skills/vulnerabilities) for details on vulnerability types.
+  </Accordion>
+
+  <Accordion title="Is Strix free to use?">
+    Yes! Strix is open-source under the Apache 2.0 License. You can:
+
+    - Use it freely for personal and commercial projects
+    - Modify and customize the source code
+    - Contribute improvements back to the community
+
+    The [Strix Platform](https://app.strix.ai) offers additional enterprise features like continuous monitoring, team collaboration, and one-click autofixes.
+  </Accordion>
+</AccordionGroup>
+
+## Installation & Setup
+
+<AccordionGroup>
+  <Accordion title="What are the system requirements?">
+    **Minimum Requirements:**
+    - Python 3.12 or higher
+    - Docker Desktop (running)
+    - 4 GB RAM available
+    - 10 GB free disk space
+    - LLM API key (OpenAI, Anthropic, Google, etc.)
+
+    **Recommended:**
+    - Python 3.13+
+    - 8 GB RAM or more
+    - SSD storage for better performance
+    - Stable internet connection for LLM API calls
+  </Accordion>
+
+  <Accordion title="How do I install Strix?">
+    Installation is simple:
+
+    ```bash
+    # Quick install
+    curl -sSL https://strix.ai/install | bash
+
+    # Or with pip
+    pip install strix-agent
+
+    # Or with pipx (recommended)
+    pipx install strix-agent
+    ```
+
+    Then configure your LLM provider:
+
+    ```bash
+    export STRIX_LLM="openai/gpt-5"
+    export LLM_API_KEY="your-api-key"
+    ```
+
+    See the [Installation Guide](/installation) for detailed instructions.
+  </Accordion>
+
+  <Accordion title="Which LLM providers are supported?">
+    Strix supports all major LLM providers:
+
+    - **OpenAI** - GPT-5, GPT-4o
+    - **Anthropic** - Claude Sonnet 4.6, Claude Opus 4
+    - **Google** - Gemini 3 Pro, Gemini 2.0 Flash
+    - **Vertex AI** - Google Cloud models
+    - **Azure OpenAI** - Azure-hosted models
+    - **AWS Bedrock** - Amazon-hosted models
+    - **Local Models** - Ollama, LM Studio
+    - **Strix Router** - Single API for multiple providers with $10 free credit
+
+    See [LLM Providers](/configuration/llm-providers) for configuration details.
+  </Accordion>
+
+  <Accordion title="Do I need to install Docker?">
+    Yes, Docker is required. Strix runs security tests in isolated Docker containers for:
+
+    - **Safety** - Prevents malicious code from affecting your system
+    - **Reproducibility** - Consistent testing environment
+    - **Tool availability** - Includes all necessary security testing tools
+
+    Download Docker Desktop from [docker.com](https://www.docker.com/products/docker-desktop/) and ensure it's running before starting Strix.
+  </Accordion>
+</AccordionGroup>
+
+## Usage
+
+<AccordionGroup>
+  <Accordion title="What targets can Strix test?">
+    Strix can test multiple target types:
+
+    - **Local codebases** - `strix --target ./app-directory`
+    - **GitHub repositories** - `strix --target https://github.com/org/repo`
+    - **Live web applications** - `strix --target https://your-app.com`
+    - **APIs** - `strix --target https://api.your-app.com`
+    - **Multiple targets** - `strix -t ./code -t https://app.com`
+
+    You can also provide authentication credentials and custom instructions for authenticated testing.
+  </Accordion>
+
+  <Accordion title="How do I run authenticated testing?">
+    Provide credentials via the `--instruction` flag:
+
+    ```bash
+    # Basic authentication
+    strix --target https://app.com \
+      --instruction "Login with username: admin, password: test123"
+
+    # API key authentication
+    strix --target https://api.app.com \
+      --instruction "Use API key: sk_test_123 in Authorization header"
+
+    # OAuth/JWT tokens
+    strix --target https://app.com \
+      --instruction "Use JWT token: eyJhbGc... in Bearer authentication"
+
+    # From file
+    strix --target https://app.com \
+      --instruction-file ./credentials.md
+    ```
+
+    See [Custom Instructions](/usage/custom-instructions) for more examples.
+  </Accordion>
+
+  <Accordion title="How long does a typical scan take?">
+    Scan duration depends on:
+
+    - **Target complexity** - Simple apps: 10-30 minutes, Complex apps: 1-3 hours
+    - **Scan mode** - Quick (~10 min), Standard (~30 min), Deep (1-3 hours)
+    - **Target size** - Number of endpoints, pages, and features
+    - **LLM speed** - Faster models complete quicker
+
+    Use `--scan-mode quick` for faster results:
+
+    ```bash
+    strix --target https://app.com --scan-mode quick
+    ```
+  </Accordion>
+
+  <Accordion title="Can I integrate Strix into CI/CD?">
+    Yes! Strix works great in CI/CD pipelines:
+
+    ```yaml
+    name: Security Scan
+    on: [pull_request]
+
+    jobs:
+      security:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v6
+          - name: Install Strix
+            run: curl -sSL https://strix.ai/install | bash
+          - name: Run Security Scan
+            env:
+              STRIX_LLM: ${{ secrets.STRIX_LLM }}
+              LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+            run: strix -n -t ./ --scan-mode quick
+    ```
+
+    Use the `-n/--non-interactive` flag for headless mode. The scan exits with a non-zero code when vulnerabilities are found.
+
+    See [CI/CD Integration](/integrations/ci-cd) for more examples.
+  </Accordion>
+
+  <Accordion title="Where are scan results saved?">
+    Results are saved in `strix_runs/<run-name>/`:
+
+    - **findings.json** - Machine-readable vulnerability data
+    - **report.html** - Human-readable HTML report
+    - **report.md** - Markdown report
+    - **logs/** - Detailed execution logs
+
+    You can specify a custom output directory:
+
+    ```bash
+    strix --target https://app.com --output-dir ./my-scan-results
+    ```
+  </Accordion>
+
+  <Accordion title="How do I customize what Strix tests?">
+    Use the `--instruction` flag to guide testing:
+
+    ```bash
+    # Focus on specific vulnerabilities
+    strix --target https://app.com \
+      --instruction "Focus on IDOR and privilege escalation"
+
+    # Test specific features
+    strix --target https://app.com \
+      --instruction "Test the payment processing and checkout flow"
+
+    # Exclude areas from testing
+    strix --target https://app.com \
+      --instruction "Do not test /admin or /internal endpoints"
+
+    # Complex instructions from file
+    strix --target https://app.com \
+      --instruction-file ./test-plan.md
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Cost & Performance
+
+<AccordionGroup>
+  <Accordion title="How much do LLM API calls cost?">
+    Costs vary by provider and model:
+
+    - **Quick scan** - $0.50 - $2.00
+    - **Standard scan** - $2.00 - $8.00
+    - **Deep scan** - $5.00 - $20.00
+
+    Factors affecting cost:
+    - Model choice (GPT-5 costs more than GPT-4o)
+    - Target complexity (more endpoints = more calls)
+    - Scan mode (deep scans use more tokens)
+
+    Use [Strix Router](https://models.strix.ai) for $10 free credit to get started.
+  </Accordion>
+
+  <Accordion title="Can I use local models to reduce costs?">
+    Yes! Use Ollama or LM Studio for free local inference:
+
+    ```bash
+    # With Ollama
+    export STRIX_LLM="ollama/llama3.3:70b"
+    export LLM_API_BASE="http://localhost:11434"
+
+    # With LM Studio
+    export STRIX_LLM="openai/local-model"
+    export LLM_API_BASE="http://localhost:1234/v1"
+    ```
+
+    Note: Local models may be slower and less capable than cloud models like GPT-5 or Claude Sonnet 4.6.
+  </Accordion>
+
+  <Accordion title="How can I optimize performance?">
+    Several strategies improve scan speed:
+
+    1. **Use faster models** - GPT-5 and Claude Sonnet 4.6 are optimized
+    2. **Choose appropriate scan mode** - Use `quick` for CI/CD
+    3. **Narrow scope** - Provide specific testing instructions
+    4. **Use prompt caching** - Enabled by default for supported models
+    5. **Adequate resources** - Ensure sufficient RAM and CPU
+
+    ```bash
+    # Fast scan for CI/CD
+    strix -n --target ./ --scan-mode quick
+
+    # Focused testing
+    strix --target https://app.com \
+      --instruction "Only test authentication and authorization"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Security & Ethics
+
+<AccordionGroup>
+  <Accordion title="Is it legal to use Strix?">
+    You must only test applications you own or have explicit permission to test. Unauthorized security testing is illegal in most jurisdictions.
+
+    **Legal use:**
+    - Your own applications and infrastructure
+    - Client applications with written authorization
+    - Bug bounty programs (following their rules)
+    - Authorized penetration testing engagements
+
+    **Illegal use:**
+    - Testing third-party applications without permission
+    - Scanning public websites without authorization
+    - Any unauthorized access attempts
+
+    See [Responsible Use](/resources/responsible-use) for detailed guidelines.
+  </Accordion>
+
+  <Accordion title="What data does Strix send to LLM providers?">
+    Strix sends to LLM providers:
+
+    - Code snippets and file contents (when testing codebases)
+    - HTTP requests and responses (when testing web apps)
+    - Error messages and application output
+    - Testing instructions and findings
+
+    **Not sent:**
+    - Your LLM API keys (stored locally only)
+    - Scan configuration files
+    - Complete databases or file systems
+
+    For sensitive applications, use:
+    - Local models (Ollama, LM Studio)
+    - Azure OpenAI with private endpoints
+    - AWS Bedrock with your own infrastructure
+  </Accordion>
+
+  <Accordion title="Does Strix store my data?">
+    Strix stores data locally:
+
+    - **Scan results** - Saved in `strix_runs/` directory
+    - **Configuration** - Saved in `~/.strix/cli-config.json`
+    - **Docker containers** - Cleaned up automatically after scans
+
+    Strix does not send telemetry or analytics data to external servers. All data remains on your system.
+  </Accordion>
+
+  <Accordion title="Can Strix damage my application?">
+    Strix is designed to be safe, but security testing carries inherent risks:
+
+    **Safety measures:**
+    - Tests run in isolated Docker containers
+    - Read-only by default for code analysis
+    - Avoids destructive operations
+
+    **Potential risks:**
+    - Resource exhaustion from intensive testing
+    - Triggering rate limits or abuse detection
+    - Inadvertent data modification in live systems
+
+    **Best practices:**
+    - Test in staging/development environments first
+    - Use read-only database replicas when possible
+    - Monitor resource usage during scans
+    - Review findings before applying autofixes
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Why won't Docker start?">
+    Common causes:
+
+    1. **Docker not installed** - Download from [docker.com](https://www.docker.com/products/docker-desktop/)
+    2. **Docker not running** - Start Docker Desktop
+    3. **Insufficient permissions** - Run Docker Desktop as administrator
+    4. **Port conflicts** - Close applications using ports 48080-48081
+
+    See [Troubleshooting](/resources/troubleshooting#docker-issues) for detailed solutions.
+  </Accordion>
+
+  <Accordion title="What if I get LLM connection errors?">
+    Check these common issues:
+
+    1. **Invalid API key** - Verify `LLM_API_KEY` is correct
+    2. **Wrong model name** - Check supported models in [LLM Providers](/configuration/llm-providers)
+    3. **Rate limiting** - Wait and retry, or upgrade your API plan
+    4. **Network issues** - Check internet connectivity
+
+    ```bash
+    # Test LLM connection
+    export STRIX_LLM="openai/gpt-5"
+    export LLM_API_KEY="your-key"
+    strix --target https://example.com --scan-mode quick
+    ```
+  </Accordion>
+
+  <Accordion title="How do I report a bug?">
+    Report bugs on [GitHub Issues](https://github.com/usestrix/strix/issues):
+
+    1. Search existing issues first
+    2. Include system information (OS, Python version, Strix version)
+    3. Provide full error traceback
+    4. List steps to reproduce
+    5. Describe expected vs actual behavior
+
+    See [Contributing](/resources/contributing#reporting-issues) for template.
+  </Accordion>
+</AccordionGroup>
+
+## Still Have Questions?
+
+Join our community:
+
+- **Discord** - [discord.gg/strix-ai](https://discord.gg/strix-ai)
+- **GitHub Discussions** - [github.com/usestrix/strix/discussions](https://github.com/usestrix/strix/discussions)
+- **Documentation** - [docs.strix.ai](https://docs.strix.ai)

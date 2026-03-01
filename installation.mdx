@@ -1,0 +1,378 @@
+---
+title: "Installation"
+description: "Install Strix and set up your security testing environment"
+---
+
+## System requirements
+
+Before installing Strix, ensure your system meets these requirements:
+
+- **Python** 3.12 or higher (3.13 and 3.14 supported)
+- **Docker** installed and running
+- **Operating system**: Linux, macOS, or Windows (with WSL2)
+- **Memory**: 4GB minimum (8GB recommended)
+- **Disk space**: 5GB for Docker images and scan results
+
+## Installation methods
+
+<Tabs>
+  <Tab title="Install script (recommended)">
+    The fastest way to install Strix is using the official install script:
+    
+    ```bash
+    curl -sSL https://strix.ai/install | bash
+    ```
+    
+    This script:
+    - Detects your operating system
+    - Installs Python dependencies
+    - Sets up the `strix` command globally
+    - Verifies Docker is available
+    
+    Verify installation:
+    
+    ```bash
+    strix --version
+    ```
+  </Tab>
+  
+  <Tab title="pip install">
+    Install Strix from PyPI using pip:
+    
+    ```bash
+    pip install strix-agent
+    ```
+    
+    This installs the `strix-agent` package and makes the `strix` command available.
+    
+    <Note>
+      Package name is `strix-agent` on PyPI, but the command is `strix`
+    </Note>
+    
+    ### Python version
+    
+    Strix requires Python 3.12+. Check your version:
+    
+    ```bash
+    python --version
+    ```
+    
+    If you need to install Python 3.12+, visit [python.org](https://www.python.org/downloads/)
+    
+    ### Virtual environment (recommended)
+    
+    Install in a virtual environment to avoid conflicts:
+    
+    ```bash
+    python -m venv strix-env
+    source strix-env/bin/activate  # On Windows: strix-env\Scripts\activate
+    pip install strix-agent
+    ```
+  </Tab>
+  
+  <Tab title="From source">
+    Install Strix from the GitHub repository:
+    
+    ```bash
+    # Clone the repository
+    git clone https://github.com/usestrix/strix.git
+    cd strix
+    
+    # Install with Poetry
+    pip install poetry
+    poetry install
+    
+    # Run Strix
+    poetry run strix --version
+    ```
+    
+    ### Development installation
+    
+    For development with optional dependencies:
+    
+    ```bash
+    # Install all dev dependencies
+    poetry install --with dev
+    
+    # Install with Vertex AI support
+    poetry install --extras vertex
+    ```
+  </Tab>
+</Tabs>
+
+## Docker setup
+
+Strix requires Docker to create isolated security testing environments.
+
+### Install Docker
+
+<Steps>
+  <Step title="Download Docker Desktop">
+    Download and install Docker Desktop for your platform:
+    
+    - **macOS**: [Docker Desktop for Mac](https://www.docker.com/products/docker-desktop)
+    - **Windows**: [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop) (requires WSL2)
+    - **Linux**: Follow the [Docker Engine installation](https://docs.docker.com/engine/install/) for your distribution
+  </Step>
+  
+  <Step title="Start Docker">
+    Launch Docker Desktop and ensure it's running:
+    
+    ```bash
+    docker ps
+    ```
+    
+    You should see an empty list of containers (or your existing containers).
+  </Step>
+  
+  <Step title="Pull the sandbox image (optional)">
+    The Docker image downloads automatically on first run, but you can pull it manually:
+    
+    ```bash
+    docker pull ghcr.io/usestrix/sandbox:latest
+    ```
+    
+    The image is approximately 2GB.
+  </Step>
+</Steps>
+
+### Docker configuration
+
+Strix uses these Docker settings from your environment:
+
+```bash
+# Optional: customize Docker socket path (default: /var/run/docker.sock)
+export DOCKER_HOST="unix:///var/run/docker.sock"
+
+# Optional: customize image (default: ghcr.io/usestrix/sandbox:latest)
+export STRIX_IMAGE="ghcr.io/usestrix/sandbox:latest"
+```
+
+## LLM provider configuration
+
+Strix requires an LLM provider for the AI agents. Configure your provider with environment variables:
+
+### Required configuration
+
+```bash
+# The LLM model to use (required)
+export STRIX_LLM="openai/gpt-5"
+
+# API key for most providers (not needed for Vertex AI, AWS Bedrock)
+export LLM_API_KEY="your-api-key-here"
+```
+
+### Provider examples
+
+<CodeGroup>
+```bash OpenAI
+export STRIX_LLM="openai/gpt-5"
+export LLM_API_KEY="sk-..."
+```
+
+```bash Anthropic
+export STRIX_LLM="anthropic/claude-sonnet-4-6"
+export LLM_API_KEY="sk-ant-..."
+```
+
+```bash Google Gemini
+export STRIX_LLM="vertex_ai/gemini-3-pro-preview"
+# Uses application default credentials - no API key needed
+```
+
+```bash Strix Router
+export STRIX_LLM="strix/gpt-5"
+export LLM_API_KEY="sk-strix-..."
+# Get your key at models.strix.ai
+```
+
+```bash Ollama (local)
+export STRIX_LLM="ollama/llama3.3"
+export LLM_API_BASE="http://localhost:11434"
+# No API key needed for local models
+```
+</CodeGroup>
+
+### Recommended models
+
+For best results, use these models:
+
+- **OpenAI GPT-5** — `openai/gpt-5`
+- **Anthropic Claude Sonnet 4.6** — `anthropic/claude-sonnet-4-6`
+- **Google Gemini 3 Pro Preview** — `vertex_ai/gemini-3-pro-preview`
+
+See [LLM Providers](/configuration/llm-providers) for the complete list of supported models and configuration options.
+
+### Optional configuration
+
+```bash
+# Custom API base URL (for local models, proxies, etc.)
+export LLM_API_BASE="http://localhost:11434"
+
+# Perplexity API key for web search capabilities
+export PERPLEXITY_API_KEY="pplx-..."
+
+# Reasoning effort: none, minimal, low, medium, high, xhigh (default: high)
+export STRIX_REASONING_EFFORT="high"
+
+# LLM timeout in seconds (default: 300)
+export LLM_TIMEOUT="300"
+```
+
+## Configuration persistence
+
+Strix automatically saves your configuration to `~/.strix/cli-config.json` after the first successful run. This means you only need to set environment variables once.
+
+### View saved configuration
+
+```bash
+cat ~/.strix/cli-config.json
+```
+
+### Override saved configuration
+
+You can override the saved config with:
+
+1. **Environment variables** - Set before running Strix
+2. **Custom config file** - Use `--config` flag:
+
+```bash
+strix --target ./app --config /path/to/custom-config.json
+```
+
+### Configuration priority
+
+Strix uses this priority order (highest to lowest):
+
+1. Command-line `--config` file
+2. Environment variables
+3. Saved config at `~/.strix/cli-config.json`
+
+## Verify installation
+
+Confirm everything is set up correctly:
+
+<Steps>
+  <Step title="Check Strix version">
+    ```bash
+    strix --version
+    ```
+    
+    Should output: `strix 0.8.2` (or your installed version)
+  </Step>
+  
+  <Step title="Verify Docker">
+    ```bash
+    docker ps
+    ```
+    
+    Should show your running containers (or empty list if none)
+  </Step>
+  
+  <Step title="Test LLM connection">
+    Strix tests your LLM connection on startup. Run a quick scan to verify:
+    
+    ```bash
+    # Create a test directory
+    mkdir test-app && cd test-app
+    echo "print('hello')" > app.py
+    
+    # Run Strix (will validate LLM connection)
+    strix --target .
+    ```
+    
+    If the LLM connection fails, you'll see a clear error message.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Command not found: strix" icon="terminal">
+    If `strix` command is not found after installation:
+    
+    **Using pip:**
+    ```bash
+    # Ensure pip bin directory is in PATH
+    python -m pip show strix-agent
+    
+    # Run directly with Python
+    python -m strix.interface.main --version
+    ```
+    
+    **Using install script:**
+    ```bash
+    # Re-run the install script
+    curl -sSL https://strix.ai/install | bash
+    source ~/.bashrc  # or ~/.zshrc
+    ```
+  </Accordion>
+  
+  <Accordion title="Python version too old" icon="python">
+    Strix requires Python 3.12+. Check your version:
+    
+    ```bash
+    python --version
+    ```
+    
+    If you have multiple Python versions, specify the version:
+    
+    ```bash
+    python3.12 -m pip install strix-agent
+    ```
+    
+    Or use [pyenv](https://github.com/pyenv/pyenv) to manage Python versions.
+  </Accordion>
+  
+  <Accordion title="Docker permission denied" icon="docker">
+    If you see "permission denied" errors with Docker:
+    
+    **Linux:**
+    ```bash
+    # Add your user to the docker group
+    sudo usermod -aG docker $USER
+    newgrp docker
+    ```
+    
+    **macOS/Windows:**
+    Ensure Docker Desktop is running with proper permissions.
+  </Accordion>
+  
+  <Accordion title="Missing STRIX_LLM environment variable" icon="key">
+    If Strix complains about missing configuration:
+    
+    ```bash
+    # Set required variables
+    export STRIX_LLM="openai/gpt-5"
+    export LLM_API_KEY="your-key"
+    
+    # Make permanent (add to ~/.bashrc or ~/.zshrc)
+    echo 'export STRIX_LLM="openai/gpt-5"' >> ~/.bashrc
+    echo 'export LLM_API_KEY="your-key"' >> ~/.bashrc
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Run your first security scan in minutes
+  </Card>
+  
+  <Card title="Basic usage" icon="terminal" href="/usage/basic-usage">
+    Learn the core commands and workflows
+  </Card>
+  
+  <Card title="LLM providers" icon="brain" href="/configuration/llm-providers">
+    Configure different LLM providers and models
+  </Card>
+  
+  <Card title="Environment variables" icon="gear" href="/configuration/environment-variables">
+    Complete reference for all configuration options
+  </Card>
+</CardGroup>
+
+<Warning>
+  Make sure Docker is running before executing Strix commands. The CLI will fail with a clear error if Docker is not available.
+</Warning>

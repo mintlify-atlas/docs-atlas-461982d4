@@ -1,0 +1,339 @@
+---
+title: GitHub Actions
+description: Integrate Strix security testing into your GitHub Actions workflows to automatically scan pull requests and deployments
+---
+
+You can add Strix to your GitHub Actions workflows to run automated security tests on pull requests, pushes, or scheduled intervals. This provides security feedback directly within your development workflow.
+
+## Quick Start Workflow
+
+Here's a minimal GitHub Actions workflow that runs Strix on every pull request:
+
+```yaml
+name: strix-penetration-test
+
+on:
+  pull_request:
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Strix
+        run: curl -sSL https://strix.ai/install | bash
+
+      - name: Run Strix
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: strix -n -t ./ --scan-mode quick
+```
+
+<Note>
+This workflow uses quick scan mode for faster CI/CD runs. For comprehensive testing, remove the `--scan-mode quick` flag.
+</Note>
+
+## Prerequisites
+
+<Steps>
+  <Step title="Ensure Docker is available">
+    GitHub Actions runners come with Docker pre-installed. Strix will automatically pull the sandbox image on first run.
+  </Step>
+  
+  <Step title="Configure secrets">
+    Add these secrets to your GitHub repository:
+    
+    - `STRIX_LLM` - Your LLM provider and model (e.g., `openai/gpt-5`)
+    - `LLM_API_KEY` - Your LLM API key
+    
+    Navigate to **Settings → Secrets and variables → Actions → New repository secret**
+  </Step>
+  
+  <Step title="Set up API access">
+    Get an API key from your chosen provider:
+    
+    - [OpenAI](https://openai.com/api/) for GPT models
+    - [Anthropic](https://claude.com/platform/api) for Claude models
+    - [Strix Router](https://models.strix.ai) for multi-provider access with $10 free credit
+  </Step>
+</Steps>
+
+## Complete Workflow Examples
+
+### Pull Request Scanning
+
+Scan code changes on every pull request with detailed reporting:
+
+```yaml
+name: Security Testing
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  strix-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      
+      - name: Install Strix
+        run: curl -sSL https://strix.ai/install | bash
+      
+      - name: Run security scan
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          STRIX_REASONING_EFFORT: "medium"
+        run: |
+          strix -n --target ./ --scan-mode quick
+      
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: strix-results
+          path: strix_runs/
+```
+
+### Scheduled Comprehensive Scans
+
+Run deeper security assessments on a schedule:
+
+```yaml
+name: Weekly Security Audit
+
+on:
+  schedule:
+    # Run every Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:  # Allow manual triggers
+
+jobs:
+  comprehensive-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Install Strix
+        run: curl -sSL https://strix.ai/install | bash
+      
+      - name: Run comprehensive scan
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+        run: |
+          strix -n --target ./
+      
+      - name: Upload detailed report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-security-report
+          path: strix_runs/
+          retention-days: 90
+```
+
+### Multi-Target Testing
+
+Test both source code and deployed staging environment:
+
+```yaml
+name: Multi-Target Security Test
+
+on:
+  push:
+    branches: [staging]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Install Strix
+        run: curl -sSL https://strix.ai/install | bash
+      
+      - name: Scan code and staging
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          strix -n \
+            -t ./ \
+            -t https://staging.your-app.com \
+            --scan-mode quick
+```
+
+### Authenticated Testing
+
+Perform grey-box testing with credentials:
+
+```yaml
+name: Authenticated Security Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Target URL to scan'
+        required: true
+        default: 'https://staging.your-app.com'
+
+jobs:
+  authenticated-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Install Strix
+        run: curl -sSL https://strix.ai/install | bash
+      
+      - name: Run authenticated scan
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+        run: |
+          strix -n \
+            --target ${{ github.event.inputs.target_url }} \
+            --instruction "Perform authenticated testing using credentials: $TEST_USERNAME:$TEST_PASSWORD"
+```
+
+## Workflow Configuration Options
+
+### Timeout Settings
+
+Set appropriate timeouts based on your scan depth:
+
+```yaml
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60  # Adjust based on your needs
+```
+
+- **Quick scans**: 15-30 minutes
+- **Standard scans**: 30-60 minutes
+- **Comprehensive scans**: 60-120 minutes
+
+### Environment Variables
+
+<CodeGroup>
+```yaml Basic Configuration
+env:
+  STRIX_LLM: ${{ secrets.STRIX_LLM }}
+  LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+```
+
+```yaml Full Configuration
+env:
+  STRIX_LLM: ${{ secrets.STRIX_LLM }}
+  LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+  LLM_API_BASE: ${{ secrets.LLM_API_BASE }}  # Optional: custom endpoint
+  PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}  # Optional: search
+  STRIX_REASONING_EFFORT: "medium"  # Options: medium, high
+```
+</CodeGroup>
+
+## Handling Results
+
+### Upload Artifacts
+
+Save scan results as workflow artifacts:
+
+```yaml
+- name: Upload results
+  if: always()  # Run even if scan fails
+  uses: actions/upload-artifact@v4
+  with:
+    name: strix-security-report
+    path: strix_runs/
+    retention-days: 30
+```
+
+### Fail on Findings
+
+Strix exits with a non-zero code when vulnerabilities are found, which automatically fails the workflow. To always pass but still save results:
+
+```yaml
+- name: Run Strix
+  continue-on-error: true
+  env:
+    STRIX_LLM: ${{ secrets.STRIX_LLM }}
+    LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+  run: strix -n --target ./
+```
+
+## Optimization Tips
+
+<Steps>
+  <Step title="Use quick scan mode for PRs">
+    Enable `--scan-mode quick` for faster feedback on pull requests:
+    ```bash
+    strix -n --target ./ --scan-mode quick
+    ```
+  </Step>
+  
+  <Step title="Adjust reasoning effort">
+    Set `STRIX_REASONING_EFFORT="medium"` for CI/CD to balance speed and accuracy.
+  </Step>
+  
+  <Step title="Cache Docker images">
+    The Strix sandbox image is cached by default on GitHub runners after the first pull.
+  </Step>
+  
+  <Step title="Run comprehensive scans on schedule">
+    Use quick scans for PRs and scheduled workflows for deep testing:
+    ```yaml
+    on:
+      pull_request:  # Quick scan
+      schedule:      # Comprehensive scan
+        - cron: '0 2 * * 0'
+    ```
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Docker Issues
+
+If Docker is not available:
+
+```yaml
+- name: Set up Docker
+  uses: docker/setup-buildx-action@v3
+```
+
+### Permission Errors
+
+Ensure the workflow has the necessary permissions:
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: write  # If posting comments
+```
+
+### API Rate Limits
+
+<Warning>
+Be mindful of your LLM provider's rate limits. Consider using Strix Router for better rate limit management across providers.
+</Warning>
+
+## Next Steps
+
+- Explore [GitLab CI integration](/integrations/gitlab-ci) if you use GitLab
+- Learn about [Docker configuration](/integrations/docker) for custom sandbox setups
+- Review [CLI options](/cli/options) for advanced configuration

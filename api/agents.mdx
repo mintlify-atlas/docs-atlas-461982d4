@@ -1,0 +1,308 @@
+---
+title: 'Agents API'
+description: 'Core classes for building and managing Strix agents'
+icon: 'robot'
+---
+
+## Overview
+
+The Agents API provides the foundation for building autonomous security testing agents. The `BaseAgent` class handles the agent lifecycle, tool execution, and interaction with the LLM.
+
+## BaseAgent
+
+The base class for all Strix agents. Manages the agent loop, tool execution, and state management.
+
+### Constructor
+
+```python
+from strix.agents import BaseAgent
+
+agent = BaseAgent(config: dict[str, Any])
+```
+
+<ParamField path="config" type="dict[str, Any]" required>
+  Configuration dictionary for the agent.
+  
+  <Expandable title="config properties">
+    <ParamField path="llm_config" type="LLMConfig" required>
+      LLM configuration for the agent
+    </ParamField>
+    
+    <ParamField path="state" type="AgentState" default="None">
+      Existing agent state to restore from
+    </ParamField>
+    
+    <ParamField path="max_iterations" type="int" default="300">
+      Maximum number of iterations before stopping
+    </ParamField>
+    
+    <ParamField path="llm_config_name" type="str" default="'default'">
+      Name of the LLM configuration
+    </ParamField>
+    
+    <ParamField path="local_sources" type="list[dict[str, str]]" default="[]">
+      Local source directories to mount in the sandbox
+    </ParamField>
+    
+    <ParamField path="non_interactive" type="bool" default="False">
+      Whether to run in non-interactive mode
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Properties
+
+<ResponseField name="agent_name" type="str">
+  The name of the agent class
+</ResponseField>
+
+<ResponseField name="max_iterations" type="int" default="300">
+  Maximum number of iterations allowed
+</ResponseField>
+
+<ResponseField name="state" type="AgentState">
+  Current agent state including messages and context
+</ResponseField>
+
+<ResponseField name="llm" type="LLM">
+  The LLM instance used by the agent
+</ResponseField>
+
+<ResponseField name="config" type="dict[str, Any]">
+  Agent configuration dictionary
+</ResponseField>
+
+### Methods
+
+#### agent_loop
+
+```python
+async def agent_loop(task: str) -> dict[str, Any]
+```
+
+Runs the main agent loop until completion or max iterations.
+
+<ParamField path="task" type="str" required>
+  The task for the agent to accomplish
+</ParamField>
+
+<ResponseField name="return" type="dict[str, Any]">
+  Final result containing success status and any output
+</ResponseField>
+
+**Example:**
+```python
+agent = BaseAgent({
+    "llm_config": llm_config,
+    "max_iterations": 100
+})
+
+result = await agent.agent_loop("Scan example.com for vulnerabilities")
+print(result)  # {'success': True, ...}
+```
+
+#### cancel_current_execution
+
+```python
+def cancel_current_execution() -> None
+```
+
+Cancels the currently running execution task.
+
+**Example:**
+```python
+agent.cancel_current_execution()
+```
+
+#### set_agent_identity
+
+```python
+def set_agent_identity(agent_name: str | None, agent_id: str | None) -> None
+```
+
+Sets the agent's identity metadata.
+
+<ParamField path="agent_name" type="str | None">
+  Human-readable agent name
+</ParamField>
+
+<ParamField path="agent_id" type="str | None">
+  Unique agent identifier
+</ParamField>
+
+## AgentState
+
+Manages the state of an agent including messages, context, and execution status.
+
+### Constructor
+
+```python
+from strix.agents.state import AgentState
+
+state = AgentState(
+    agent_name: str = "Strix Agent",
+    max_iterations: int = 300
+)
+```
+
+<ParamField path="agent_name" type="str" default="'Strix Agent'">
+  Name of the agent
+</ParamField>
+
+<ParamField path="max_iterations" type="int" default="300">
+  Maximum iterations allowed
+</ParamField>
+
+### Properties
+
+<ResponseField name="agent_id" type="str">
+  Unique identifier (auto-generated)
+</ResponseField>
+
+<ResponseField name="agent_name" type="str">
+  Agent name
+</ResponseField>
+
+<ResponseField name="parent_id" type="str | None">
+  Parent agent ID for sub-agents
+</ResponseField>
+
+<ResponseField name="sandbox_id" type="str | None">
+  Docker container ID for the sandbox
+</ResponseField>
+
+<ResponseField name="task" type="str">
+  Current task description
+</ResponseField>
+
+<ResponseField name="iteration" type="int">
+  Current iteration count
+</ResponseField>
+
+<ResponseField name="completed" type="bool">
+  Whether the task is completed
+</ResponseField>
+
+<ResponseField name="messages" type="list[dict[str, Any]]">
+  Conversation history
+</ResponseField>
+
+<ResponseField name="context" type="dict[str, Any]">
+  Additional context storage
+</ResponseField>
+
+### Methods
+
+#### add_message
+
+```python
+def add_message(
+    role: str,
+    content: Any,
+    thinking_blocks: list[dict[str, Any]] | None = None
+) -> None
+```
+
+Adds a message to the conversation history.
+
+<ParamField path="role" type="str" required>
+  Message role: "user" or "assistant"
+</ParamField>
+
+<ParamField path="content" type="Any" required>
+  Message content
+</ParamField>
+
+<ParamField path="thinking_blocks" type="list[dict[str, Any]] | None">
+  Optional thinking blocks from reasoning models
+</ParamField>
+
+#### increment_iteration
+
+```python
+def increment_iteration() -> None
+```
+
+Increments the iteration counter.
+
+#### set_completed
+
+```python
+def set_completed(final_result: dict[str, Any] | None = None) -> None
+```
+
+Marks the agent as completed.
+
+<ParamField path="final_result" type="dict[str, Any] | None">
+  Final result data
+</ParamField>
+
+#### get_conversation_history
+
+```python
+def get_conversation_history() -> list[dict[str, Any]]
+```
+
+Returns the full conversation history.
+
+<ResponseField name="return" type="list[dict[str, Any]]">
+  List of message dictionaries
+</ResponseField>
+
+#### get_execution_summary
+
+```python
+def get_execution_summary() -> dict[str, Any]
+```
+
+Returns a summary of the agent's execution.
+
+<ResponseField name="return" type="dict[str, Any]">
+  Dictionary containing agent_id, task, iteration count, completion status, etc.
+</ResponseField>
+
+**Example:**
+```python
+state = AgentState(agent_name="Scanner", max_iterations=50)
+state.add_message("user", "Find vulnerabilities in the API")
+state.increment_iteration()
+
+if state.iteration >= state.max_iterations:
+    state.set_completed({"success": False, "reason": "max_iterations"})
+
+summary = state.get_execution_summary()
+print(summary["iteration"])  # Current iteration count
+```
+
+## Usage Example
+
+```python
+import asyncio
+from strix.agents import BaseAgent
+from strix.llm import LLMConfig
+
+async def main():
+    # Configure LLM
+    llm_config = LLMConfig(
+        model_name="claude-3-5-sonnet-20241022",
+        scan_mode="standard"
+    )
+    
+    # Create agent
+    agent = BaseAgent({
+        "llm_config": llm_config,
+        "max_iterations": 100,
+        "non_interactive": True
+    })
+    
+    # Run agent
+    result = await agent.agent_loop(
+        "Scan the web application at https://example.com"
+    )
+    
+    print(f"Success: {result.get('success')}")
+    print(f"Iterations: {agent.state.iteration}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```

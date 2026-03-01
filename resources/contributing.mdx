@@ -1,0 +1,236 @@
+---
+title: Contributing
+description: Learn how to contribute to Strix through code, skills, documentation, and community engagement
+---
+
+Thank you for your interest in contributing to Strix! This guide will help you get started with development and contributions.
+
+## Development Setup
+
+### Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Python 3.12+** - Required for running Strix
+- **Docker** - Must be running for sandbox environments
+- **Poetry** - For dependency management
+- **Git** - For version control
+
+### Local Development
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/usestrix/strix.git
+   cd strix
+   ```
+
+2. **Install development dependencies**
+
+   ```bash
+   make setup-dev
+
+   # or manually:
+   poetry install --with=dev
+   poetry run pre-commit install
+   ```
+
+3. **Configure your LLM provider**
+
+   ```bash
+   export STRIX_LLM="openai/gpt-5"
+   export LLM_API_KEY="your-api-key"
+   ```
+
+4. **Run Strix in development mode**
+
+   ```bash
+   poetry run strix --target https://example.com
+   ```
+
+## Contributing Skills
+
+Skills are specialized knowledge packages that enhance agent capabilities. See the [Skills documentation](/skills/overview) for detailed guidelines.
+
+### Quick Guide
+
+1. **Choose the right category** - `/vulnerabilities`, `/frameworks`, `/technologies`, etc.
+2. **Create a `.md` file** with your skill content
+3. **Include practical examples** - Working payloads, commands, or test cases
+4. **Provide validation methods** - How to confirm findings and avoid false positives
+5. **Submit via PR** with clear description
+
+### Skill Structure
+
+A good skill includes:
+
+- YAML frontmatter with `name` and `description`
+- Advanced techniques specific to the domain
+- Practical examples with variations
+- Validation and confirmation methods
+- Context-specific insights and edge cases
+
+## Contributing Code
+
+### Pull Request Process
+
+1. **Create an issue first** - Describe the problem or feature
+2. **Fork and branch** - Work from the `main` branch
+3. **Make your changes** - Follow existing code style
+4. **Write/update tests** - Ensure coverage for new features
+5. **Run quality checks** - `make check-all` should pass
+6. **Submit PR** - Link to issue and provide context
+
+### PR Guidelines
+
+- **Clear description** - Explain what and why
+- **Small, focused changes** - One feature/fix per PR
+- **Include examples** - Show before/after behavior
+- **Update documentation** - If adding features
+- **Pass all checks** - Tests, linting, type checking
+
+### Code Style
+
+Follow these conventions:
+
+- Follow PEP 8 with 100-character line limit
+- Use type hints for all functions
+- Write docstrings for public methods
+- Keep functions focused and small
+- Use meaningful variable names
+
+### Quality Checks
+
+Run these commands before submitting:
+
+```bash
+# Run all checks
+make check-all
+
+# Individual checks
+make lint        # Ruff linting
+make typecheck   # MyPy type checking
+make test        # Run test suite
+```
+
+## Reporting Issues
+
+When reporting bugs, please include:
+
+- **Python version and OS** - e.g., Python 3.12 on Ubuntu 22.04
+- **Strix version** - Check with `strix --version`
+- **LLMs being used** - e.g., OpenAI GPT-5, Claude Sonnet 4.6
+- **Full error traceback** - Copy the complete error message
+- **Steps to reproduce** - Clear, numbered steps
+- **Expected vs actual behavior** - What should happen vs what does happen
+
+### Example Bug Report
+
+```markdown
+**Environment:**
+- OS: macOS 14.2
+- Strix: 0.8.2
+- Python: 3.12.1
+- LLM: openai/gpt-5
+
+**Issue:**
+Docker container fails to start with "port already in use" error.
+
+**Steps to Reproduce:**
+1. Run `strix --target https://example.com`
+2. Cancel scan (Ctrl+C)
+3. Run `strix --target https://example.com` again
+
+**Expected:** Scan starts successfully
+**Actual:** Error: "port 48081 already in use"
+
+**Error Log:**
+[paste full traceback here]
+```
+
+## Feature Requests
+
+We welcome feature ideas! Please:
+
+- **Check existing issues first** - Avoid duplicates
+- **Describe the use case clearly** - What problem does it solve?
+- **Explain why it would benefit users** - Who needs this?
+- **Consider implementation approach** - How might it work?
+- **Be open to discussion** - We may suggest alternatives
+
+## Code Review Process
+
+When you submit a PR:
+
+1. **Automated checks run** - CI/CD pipeline validates your code
+2. **Maintainer review** - A team member reviews your changes
+3. **Feedback incorporated** - You make requested changes
+4. **Approval and merge** - Once approved, we merge your PR
+
+Typical review timeline: 2-5 business days
+
+## Community
+
+Join the Strix community:
+
+- **Discord** - [Join our community](https://discord.gg/strix-ai) for real-time chat
+- **GitHub Issues** - [Report bugs and request features](https://github.com/usestrix/strix/issues)
+- **GitHub Discussions** - Share ideas and ask questions
+
+## Recognition
+
+We value all contributions! Contributors will be:
+
+- Listed in release notes
+- Thanked in our Discord community
+- Added to the contributors list
+- Mentioned in relevant documentation
+
+## Development Tips
+
+### Running Tests
+
+```bash
+# Run all tests
+poetry run pytest
+
+# Run specific test file
+poetry run pytest tests/test_agents.py
+
+# Run with coverage
+poetry run pytest --cov=strix --cov-report=html
+```
+
+### Debugging
+
+```bash
+# Enable debug logging
+export STRIX_LOG_LEVEL=DEBUG
+
+# Keep container running after scan
+export STRIX_KEEP_CONTAINER=true
+```
+
+### Working with Docker
+
+```bash
+# View running containers
+docker ps
+
+# Access container shell
+docker exec -it <container-id> /bin/bash
+
+# View container logs
+docker logs <container-id>
+
+# Clean up containers
+docker container prune
+```
+
+## License
+
+By contributing to Strix, you agree that your contributions will be licensed under the Apache 2.0 License.
+
+## Questions?
+
+Reach out on [Discord](https://discord.gg/strix-ai) or create an issue. We're here to help!

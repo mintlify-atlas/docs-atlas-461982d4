@@ -1,0 +1,375 @@
+---
+title: Interactive Mode
+description: Using Strix's text-based user interface (TUI) for real-time penetration testing
+---
+
+By default, Strix runs in interactive mode with a text-based user interface (TUI) that provides real-time visibility into the penetration testing process.
+
+## Overview
+
+Interactive mode is the default when you run Strix without the `--non-interactive` flag:
+
+```bash
+strix --target https://example.com
+```
+
+The TUI provides:
+
+- **Real-time agent activity** - Watch AI agents work in real-time
+- **Vulnerability notifications** - See vulnerabilities as they're discovered
+- **Agent tree view** - Track parent and child agents
+- **Live statistics** - Monitor progress and resource usage
+- **Interactive chat** - Guide agents during the scan
+
+## TUI Interface
+
+### Layout
+
+The TUI is divided into several sections:
+
+```
+┌─────────────────────────────────────────────────────┬──────────────────┐
+│                                                     │                  │
+│                                                     │   Agents Tree    │
+│                                                     │                  │
+│              Chat / Agent Activity                  ├──────────────────┤
+│                                                     │                  │
+│                                                     │ Vulnerabilities  │
+│                                                     │                  │
+│                                                     ├──────────────────┤
+│                                                     │                  │
+│                                                     │   Statistics     │
+├─────────────────────────────────────────────────────┤                  │
+│ > [Chat Input]                                      │                  │
+└─────────────────────────────────────────────────────┴──────────────────┘
+```
+
+### Agents Tree (Sidebar)
+
+The left sidebar shows all active agents in a tree structure:
+
+- **⚪ Running** - Agent is actively working
+- **⏸ Waiting** - Agent is waiting for input or another agent
+- **🟢 Completed** - Agent finished successfully
+- **🔴 Failed** - Agent encountered an error
+- **■ Stopped** - Agent was manually stopped
+
+Agents with vulnerabilities show a count: `⚪ Web Scanner (3)`
+
+### Vulnerabilities Panel (Sidebar)
+
+Vulnerabilities are displayed with severity-colored indicators:
+
+- **● Critical** - Red
+- **● High** - Orange
+- **● Medium** - Amber
+- **● Low** - Green
+- **● Info** - Blue
+
+Click on any vulnerability to view full details.
+
+### Chat Area (Main Panel)
+
+The main panel shows:
+
+- **Agent messages** - LLM reasoning and decision-making
+- **Tool executions** - What tools agents are using
+- **Streaming output** - Real-time content as it's generated
+- **Status indicators** - Current agent state
+
+### Statistics Panel (Sidebar Bottom)
+
+Displays:
+
+- Scan duration
+- Active agents count
+- Tools executed
+- Vulnerabilities found
+- Version number
+
+## Keyboard Shortcuts
+
+<ParamField path="Enter" type="key">
+  Send a message to the selected agent
+</ParamField>
+
+<ParamField path="Shift+Enter" type="key">
+  Insert a newline in the chat input
+</ParamField>
+
+<ParamField path="Tab" type="key">
+  Switch between chat input and agents tree
+</ParamField>
+
+<ParamField path="↑ / ↓" type="key">
+  Navigate the agents tree
+</ParamField>
+
+<ParamField path="Esc" type="key">
+  Stop the selected agent
+</ParamField>
+
+<ParamField path="F1" type="key">
+  Show help screen
+</ParamField>
+
+<ParamField path="Ctrl+Q / Ctrl+C" type="key">
+  Quit Strix (with confirmation)
+</ParamField>
+
+## Interacting with Agents
+
+### Selecting an Agent
+
+1. Press `Tab` to focus the agents tree
+2. Use `↑` and `↓` arrows to select an agent
+3. Press `Tab` again to return to chat input
+
+The main panel updates to show the selected agent's activity.
+
+### Sending Messages
+
+You can guide agents by sending messages:
+
+1. Select an agent from the tree
+2. Type your message in the chat input
+3. Press `Enter` to send
+
+**Example messages:**
+
+```
+Focus on the authentication endpoints
+```
+
+```
+Try using SQL injection on the search parameter
+```
+
+```
+Check for IDOR vulnerabilities in /api/users
+```
+
+### Resuming Waiting Agents
+
+When an agent status shows **⏸ Waiting**, it needs your input:
+
+1. Select the waiting agent
+2. Read its last message to understand what it needs
+3. Send a response to resume the agent
+
+### Stopping Agents
+
+1. Select the agent you want to stop
+2. Press `Esc`
+3. Confirm the action when prompted
+
+## Viewing Vulnerabilities
+
+### In the Vulnerabilities Panel
+
+1. Click on any vulnerability in the sidebar
+2. A detailed modal opens showing:
+   - Full description
+   - CVSS score and breakdown
+   - Technical analysis
+   - Proof-of-concept code
+   - Remediation steps
+
+### Copying Vulnerability Reports
+
+In the vulnerability detail modal:
+
+1. Click the **Copy** button
+2. The vulnerability is copied to clipboard in Markdown format
+3. Paste into GitHub issues, Jira, or documentation
+
+## Startup Sequence
+
+### 1. Splash Screen
+
+When you launch Strix, you'll see an animated splash screen:
+
+```
+ ███████╗████████╗██████╗ ██╗██╗  ██╗
+ ██╔════╝╚══██╔══╝██╔══██╗██║╚██╗██╔╝
+ ███████╗   ██║   ██████╔╝██║ ╚███╔╝
+ ╚════██║   ██║   ██╔══██╗██║ ██╔██╗
+ ███████║   ██║   ██║  ██║██║██╔╝ ██╗
+ ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝
+
+Welcome to Strix!
+Starting Strix Agent...
+```
+
+This displays for approximately 4.5 seconds while:
+
+- Environment is validated
+- LLM connection is tested
+- Docker image is pulled (first run only)
+- Agent configuration is prepared
+
+### 2. Main Interface
+
+After the splash screen, the full TUI interface loads and the scan begins automatically.
+
+## Scan Completion
+
+When the scan completes:
+
+### In Interactive Mode
+
+The TUI remains open so you can:
+
+- Review the full scan history
+- Examine vulnerabilities in detail
+- Copy reports to clipboard
+- Navigate the agent tree
+
+Press `Ctrl+Q` to quit when you're ready.
+
+### Completion Panel
+
+When you quit, you'll see a summary panel:
+
+```
+╔══════════════════════════════════════════╗
+║ STRIX                                    ║
+║ Penetration test completed               ║
+║                                          ║
+║ Target  https://example.com              ║
+║                                          ║
+║ Vulnerabilities  3 found                 ║
+║ Duration         12m 34s                 ║
+║ Tools executed   47                      ║
+║                                          ║
+║ Output  strix_runs/example_20260301_1234║
+╚══════════════════════════════════════════╝
+
+models.strix.ai  ·  discord.gg/strix-ai
+```
+
+## Terminal Requirements
+
+### Minimum Requirements
+
+- **Terminal emulator** with 256 color support
+- **Minimum size**: 80x24 characters
+- **Recommended size**: 120x40 characters or larger
+
+### Supported Terminals
+
+- **Linux**: GNOME Terminal, Konsole, Alacritty, kitty, Terminator
+- **macOS**: Terminal.app, iTerm2, Alacritty, kitty
+- **Windows**: Windows Terminal, WSL2 with any Linux terminal
+
+### Font Recommendations
+
+For best results, use a monospace font that supports Unicode box-drawing characters:
+
+- Fira Code
+- JetBrains Mono
+- Cascadia Code
+- SF Mono (macOS)
+- Consolas (Windows)
+
+## Advanced Features
+
+### Multi-Agent Coordination
+
+The agents tree shows parent-child relationships:
+
+```
+⚪ Strix Agent
+  ├─ ⚪ Web Scanner (1)
+  │   ├─ 🟢 Auth Tester
+  │   └─ ⚪ API Fuzzer (2)
+  └─ ⚪ Code Analyzer
+      └─ 🟢 SAST Agent
+```
+
+This visualizes:
+
+- Which agents spawned which sub-agents
+- Agent hierarchy and specialization
+- Which agents found vulnerabilities
+
+### Real-Time Streaming
+
+As agents think and work, you see:
+
+- **Text segments** - Agent reasoning in natural language
+- **Tool calls** - Functions being invoked with parameters
+- **Completion markers** - When tools finish executing
+
+### Live Statistics Updates
+
+Statistics update every 350ms showing:
+
+- How long the scan has been running
+- How many agents are active
+- Total tool executions
+- Vulnerabilities discovered so far
+
+## Troubleshooting
+
+### TUI Not Displaying Correctly
+
+**Problem**: Characters are garbled or boxes don't align
+
+**Solutions**:
+- Ensure your terminal supports 256 colors: `echo $TERM`
+- Try setting: `export TERM=xterm-256color`
+- Use a different terminal emulator
+- Increase terminal font size
+
+### Agent Stuck on "Initializing"
+
+**Problem**: Agent shows status "Initializing" for a long time
+
+**Solutions**:
+- Wait - LLM initialization can take 30-60 seconds
+- Check network connectivity to LLM provider
+- Verify LLM API key is valid
+- Check if Docker containers are running: `docker ps`
+
+### Can't See Full Vulnerability Details
+
+**Problem**: Vulnerability text is truncated
+
+**Solutions**:
+- Increase terminal window size
+- Click vulnerability to open detail modal
+- Use the Copy button to get full report
+- Check output files in `strix_runs/` directory
+
+### High CPU Usage
+
+**Problem**: Terminal is consuming significant CPU
+
+**Explanation**: The TUI refreshes frequently (2 times per second) to show real-time updates. This is normal during active scans.
+
+**Solutions**:
+- Reduce terminal window size
+- Use `--non-interactive` mode instead
+- Close other terminal tabs/windows
+
+## Comparison with Non-Interactive Mode
+
+| Feature | Interactive Mode | Non-Interactive Mode |
+|---------|------------------|----------------------|
+| TUI Display | Yes | No |
+| Real-time updates | Yes | Limited |
+| Agent interaction | Yes | No |
+| Auto-exit | No | Yes |
+| Exit code 2 for vulns | No | Yes |
+| CI/CD friendly | No | Yes |
+| Human supervision | Yes | No |
+| Resource usage | Higher | Lower |
+
+See [Non-Interactive Mode](/cli/non-interactive-mode) for automation use cases.
+
+## See Also
+
+- [Non-Interactive Mode](/cli/non-interactive-mode) - Headless operation
+- [Examples](/cli/examples) - Usage examples
+- [Vulnerability Format](/cli/vulnerability-format) - Report structure

@@ -1,0 +1,403 @@
+---
+title: Responsible Use Guidelines
+description: Ethical and legal guidelines for using Strix security testing tools
+---
+
+Strix is a powerful security testing platform. With great power comes great responsibility. This guide outlines ethical and legal guidelines for using Strix.
+
+<Warning>
+  **Legal Notice:** You are solely responsible for how you use Strix. Only test applications you own or have explicit written permission to test. Unauthorized security testing is illegal in most jurisdictions.
+</Warning>
+
+## Legal Requirements
+
+### Authorization
+
+You must obtain proper authorization before testing any system:
+
+**Required Authorization:**
+- **Your own applications** - Applications you own or develop
+- **Client applications** - Written authorization from the system owner
+- **Bug bounty programs** - Follow program rules and scope
+- **Penetration testing engagements** - Formal signed contract or statement of work
+
+**Prohibited Without Authorization:**
+- Third-party applications or websites
+- Public-facing systems you don't own
+- Competitor applications
+- Any system without explicit permission
+
+### Documentation
+
+Maintain proper documentation:
+
+1. **Authorization letter** - Written permission from system owner
+2. **Scope document** - Clear boundaries of what can be tested
+3. **Rules of engagement** - Testing windows, limitations, contact procedures
+4. **Findings report** - Document all discoveries professionally
+
+### Example Authorization Request
+
+```markdown
+To: [System Owner]
+From: [Your Name/Company]
+Subject: Security Testing Authorization Request
+
+I request authorization to perform security testing on:
+- Application: [Name]
+- URL/Environment: [Target]
+- Testing Period: [Dates]
+- Scope: [Endpoints, features, exclusions]
+
+Testing Methodology:
+- Automated scanning with Strix
+- Manual vulnerability validation
+- No destructive testing
+- No data exfiltration
+
+Please confirm authorization in writing.
+
+Regards,
+[Your Name]
+```
+
+## Ethical Guidelines
+
+### Do No Harm
+
+Always prioritize safety:
+
+- **No destructive testing** - Don't delete data or disrupt services
+- **Respect privacy** - Don't access or exfiltrate personal data
+- **Minimize impact** - Use staging environments when possible
+- **Stop if uncertain** - If something could cause harm, stop and ask
+
+### Responsible Disclosure
+
+When you discover vulnerabilities:
+
+1. **Report privately first** - Don't publicly disclose immediately
+2. **Provide details** - Clear reproduction steps and impact assessment
+3. **Allow time to fix** - Give reasonable time (typically 90 days)
+4. **Don't exploit for personal gain** - Don't use findings maliciously
+5. **Follow disclosure programs** - Respect bug bounty timelines and processes
+
+### Example Disclosure Timeline
+
+| Day | Action |
+|-----|--------|
+| 0 | Discover vulnerability |
+| 1 | Report to security team/program |
+| 7 | Follow up if no response |
+| 14 | Escalate if still no response |
+| 90 | Coordinated public disclosure (if agreed) |
+
+### Respect Boundaries
+
+Stay within defined scope:
+
+- **Test only authorized targets** - Don't expand scope without permission
+- **Respect testing windows** - Test during agreed-upon times
+- **Honor exclusions** - Don't test explicitly excluded areas
+- **Stop when asked** - Immediately cease if authorization is revoked
+
+## Best Practices
+
+### Before Testing
+
+1. **Verify authorization**
+   ```bash
+   # Document authorization
+   cat > authorization.txt << EOF
+   Date: $(date)
+   Target: https://example.com
+   Authorized by: [Name]
+   Valid until: [Date]
+   EOF
+   ```
+
+2. **Review scope carefully**
+   - What is in scope?
+   - What is explicitly out of scope?
+   - Are there rate limits or testing windows?
+   - Who is the emergency contact?
+
+3. **Prepare safe environment**
+   - Use staging/test environments when available
+   - Configure read-only database replicas
+   - Set up monitoring and alerts
+
+4. **Configure Strix responsibly**
+   ```bash
+   # Use appropriate scan mode
+   strix --target https://staging.example.com --scan-mode quick
+
+   # Provide clear boundaries
+   strix --target https://example.com \
+     --instruction "Do not test /admin or /internal. Avoid destructive operations."
+   ```
+
+### During Testing
+
+1. **Monitor impact**
+   - Watch for performance degradation
+   - Check for triggered alerts
+   - Monitor error logs
+
+2. **Document findings thoroughly**
+   - Take screenshots
+   - Save request/response pairs
+   - Note exact steps to reproduce
+
+3. **Communicate proactively**
+   - Notify if you discover critical vulnerabilities
+   - Report any testing issues immediately
+   - Ask if uncertain about scope
+
+4. **Stay professional**
+   - Don't access user data unnecessarily
+   - Don't demonstrate vulnerabilities to unauthorized parties
+   - Maintain confidentiality
+
+### After Testing
+
+1. **Submit comprehensive report**
+   ```bash
+   # Strix generates reports automatically
+   # Review before sharing
+   cat strix_runs/latest/report.md
+   ```
+
+2. **Secure findings data**
+   - Encrypt sensitive reports
+   - Store securely
+   - Delete when no longer needed
+
+3. **Follow up responsibly**
+   - Confirm receipt of report
+   - Offer to clarify findings
+   - Verify fixes if requested
+
+4. **Clean up**
+   ```bash
+   # Remove test accounts or data created
+   # Stop any persistent processes
+   # Clean up Docker containers
+   docker container prune -f
+   ```
+
+## Specific Scenarios
+
+### Bug Bounty Programs
+
+When testing bug bounty programs:
+
+1. **Read program rules carefully**
+   - Scope and exclusions
+   - Severity guidelines
+   - Disclosure requirements
+
+2. **Follow platform guidelines**
+   - HackerOne, Bugcrowd, etc. have specific rules
+   - Respect program preferences
+
+3. **Submit quality reports**
+   - Clear title and summary
+   - Detailed reproduction steps
+   - Impact assessment
+   - Suggested remediation
+
+4. **Be patient**
+   - Triage takes time
+   - Respond to questions promptly
+   - Don't pressure for rewards
+
+### Penetration Testing Engagements
+
+For formal pentest contracts:
+
+1. **Formalize rules of engagement**
+   - Signed statement of work
+   - Clear scope and timelines
+   - Emergency contacts
+   - Legal protections
+
+2. **Maintain professionalism**
+   - Regular status updates
+   - Document everything
+   - Deliver quality reports
+   - Present findings clearly
+
+3. **Provide actionable recommendations**
+   - Prioritized findings
+   - Remediation guidance
+   - Retesting services
+
+### Internal Security Testing
+
+Testing your own organization's systems:
+
+1. **Get management approval**
+   - Even internal testing needs authorization
+   - Document approval
+   - Coordinate with teams
+
+2. **Use appropriate environments**
+   ```bash
+   # Test staging first
+   strix --target https://staging.internal.com
+
+   # Then production if necessary
+   strix --target https://prod.internal.com --scan-mode quick
+   ```
+
+3. **Coordinate with operations**
+   - Notify security team
+   - Schedule during low-traffic periods
+   - Have incident response ready
+
+### CI/CD Integration
+
+Automated security testing in pipelines:
+
+1. **Scope appropriately**
+   ```yaml
+   # Only scan your own code
+   - name: Security Scan
+     run: strix -n -t ./ --scan-mode quick
+   ```
+
+2. **Handle findings responsibly**
+   - Set up secure notifications
+   - Restrict access to findings
+   - Track remediation
+
+3. **Respect rate limits**
+   - Don't overload external services
+   - Use caching when possible
+   - Configure reasonable timeouts
+
+## Data Privacy
+
+### What Data Strix Accesses
+
+Strix may access:
+- Source code and configuration files
+- HTTP requests and responses
+- Application output and error messages
+- User interface and API endpoints
+
+### Protecting Sensitive Data
+
+1. **Use test data**
+   - Never use production user data
+   - Create synthetic test datasets
+   - Anonymize when necessary
+
+2. **Secure LLM API calls**
+   ```bash
+   # Use private LLM instances for sensitive apps
+   export STRIX_LLM="azure/gpt-5-private"
+   export LLM_API_BASE="https://private.openai.azure.com"
+
+   # Or use local models
+   export STRIX_LLM="ollama/llama3.3:70b"
+   ```
+
+3. **Sanitize reports**
+   - Remove credentials from findings
+   - Redact sensitive data
+   - Encrypt before sharing
+
+4. **Secure storage**
+   ```bash
+   # Encrypt scan results
+   tar -czf - strix_runs/ | gpg -c > scan-results.tar.gz.gpg
+
+   # Secure delete originals
+   rm -rf strix_runs/
+   ```
+
+<Warning>
+  **Privacy Notice:** When using cloud LLM providers, your target's code and data may be sent to third-party APIs. Use local models or private cloud deployments for highly sensitive applications.
+</Warning>
+
+## Legal Consequences
+
+### Unauthorized Access Laws
+
+Most countries have laws prohibiting unauthorized computer access:
+
+- **United States** - Computer Fraud and Abuse Act (CFAA)
+- **European Union** - Computer Misuse Directive
+- **United Kingdom** - Computer Misuse Act 1990
+- **Australia** - Cybercrime Act 2001
+
+Violations can result in:
+- Criminal charges
+- Civil lawsuits
+- Significant fines
+- Imprisonment
+- Professional consequences
+
+### Safe Harbor Provisions
+
+Some bug bounty programs provide legal safe harbor:
+
+- Protected if you follow program rules
+- Authorization in writing
+- Good faith security research
+- Responsible disclosure
+
+Always verify safe harbor provisions before testing.
+
+## When in Doubt
+
+**Stop and ask:**
+
+- Is this system explicitly in scope?
+- Do I have written authorization?
+- Could this cause harm or disruption?
+- Am I accessing data I shouldn't?
+- Would I want someone doing this to my system without asking?
+
+If you're uncertain about anything, stop testing and seek clarification.
+
+## Resources
+
+### Further Reading
+
+- [OWASP Testing Guide](https://owasp.org/www-project-web-security-testing-guide/)
+- [Penetration Testing Execution Standard](http://www.pentest-standard.org/)
+- [Bug Bounty Platforms](https://docs.strix.ai/guides/bug-bounty)
+
+### Legal Guidance
+
+- Consult legal counsel for formal engagements
+- Review local computer crime laws
+- Understand safe harbor provisions
+
+### Community Standards
+
+- [Discord Community](https://discord.gg/strix-ai)
+- [GitHub Discussions](https://github.com/usestrix/strix/discussions)
+
+## Reporting Misuse
+
+If you observe Strix being misused:
+
+1. **Document the misuse** - Screenshots, logs, evidence
+2. **Report to appropriate authorities** - Law enforcement if illegal
+3. **Notify Strix team** - Email hi@usestrix.com
+4. **Don't engage directly** - Let authorities handle it
+
+## Conclusion
+
+Security testing is essential for building secure applications. By following these guidelines, you ensure your testing is:
+
+- **Legal** - Properly authorized and documented
+- **Ethical** - Responsible and non-harmful
+- **Effective** - Produces actionable results
+- **Professional** - Maintains trust and reputation
+
+Use Strix responsibly. Test only what you're authorized to test. Report findings ethically. Help make the internet more secure for everyone.

@@ -1,0 +1,409 @@
+---
+title: Docker Settings
+description: Configure Docker runtime settings for Strix sandbox environments
+---
+
+Strix uses Docker to create isolated sandbox environments for security testing. Understanding Docker configuration helps you customize the runtime behavior and troubleshoot issues.
+
+## Prerequisites
+
+Strix requires Docker to be installed and running:
+
+```bash
+# Check if Docker is installed
+docker --version
+
+# Check if Docker is running
+docker ps
+```
+
+<Note>
+  Docker Desktop must be running before you start Strix. If Docker is not available, Strix will exit with an error.
+</Note>
+
+## Sandbox Image
+
+### Default Image
+
+Strix uses a pre-built Docker image that contains all security testing tools:
+
+```bash
+export STRIX_IMAGE="ghcr.io/usestrix/strix-sandbox:0.1.12"
+```
+
+The sandbox image includes:
+- Python runtime with security libraries
+- Terminal environments for command execution
+- Browser automation (Playwright)
+- HTTP proxy (Caido)
+- Common security tools (Nuclei, etc.)
+
+### Custom Image
+
+You can use a custom sandbox image:
+
+```bash
+export STRIX_IMAGE="your-registry/custom-strix-sandbox:tag"
+```
+
+<Warning>
+  Custom images must implement the Strix tool server API and include all required dependencies. Using an incompatible image will cause Strix to fail.
+</Warning>
+
+### Image Pull
+
+On first run, Strix automatically pulls the sandbox image:
+
+```bash
+Pulling image ghcr.io/usestrix/strix-sandbox:0.1.12
+This only happens on first run and may take a few minutes...
+```
+
+The image is cached locally and reused for subsequent runs.
+
+## Runtime Configuration
+
+### Runtime Backend
+
+Strix uses Docker as the runtime backend:
+
+```bash
+export STRIX_RUNTIME_BACKEND="docker"
+```
+
+<Note>
+  Currently, only `docker` is supported as a runtime backend. Other backends may be added in future releases.
+</Note>
+
+### Execution Timeout
+
+Control how long Strix waits for individual tool executions:
+
+```bash
+export STRIX_SANDBOX_EXECUTION_TIMEOUT="120"  # seconds
+```
+
+This timeout applies to:
+- Terminal command execution
+- Python script execution
+- File operations
+- HTTP requests via proxy
+
+Increase this value if you're testing slow targets or running complex exploits:
+
+```bash
+# For slow targets
+export STRIX_SANDBOX_EXECUTION_TIMEOUT="300"  # 5 minutes
+```
+
+### Connection Timeout
+
+Control how long Strix waits to connect to the sandbox tool server:
+
+```bash
+export STRIX_SANDBOX_CONNECT_TIMEOUT="10"  # seconds
+```
+
+Increase this value if container startup is slow:
+
+```bash
+# For slow Docker environments
+export STRIX_SANDBOX_CONNECT_TIMEOUT="30"
+```
+
+## Container Management
+
+### Container Naming
+
+Strix creates containers with predictable names:
+
+```bash
+strix-scan-{scan-id}
+```
+
+Where `scan-id` is derived from the scan configuration.
+
+### Container Reuse
+
+Strix automatically reuses containers across runs:
+
+1. If a container with the same scan ID exists, Strix reuses it
+2. If the container is stopped, Strix restarts it
+3. If the container is corrupted, Strix recreates it
+
+This improves performance by avoiding repeated container creation.
+
+### Manual Container Management
+
+You can manually manage Strix containers:
+
+```bash
+# List all Strix containers
+docker ps -a --filter "name=strix-scan-"
+
+# Stop a running scan container
+docker stop strix-scan-{scan-id}
+
+# Remove a scan container
+docker rm -f strix-scan-{scan-id}
+
+# Remove all Strix containers
+docker rm -f $(docker ps -a --filter "name=strix-scan-" -q)
+```
+
+### Container Cleanup
+
+Strix automatically cleans up containers when:
+- The scan completes successfully
+- You exit the TUI
+- The process is interrupted (Ctrl+C)
+
+In some cases, containers may not be cleaned up automatically. You can clean them manually:
+
+```bash
+# Remove all stopped Strix containers
+docker container prune --filter "label=strix-scan-id"
+```
+
+## Network Configuration
+
+### Port Bindings
+
+Strix automatically binds container ports to random host ports:
+
+- **Tool Server** - Container port `48081` → Random host port
+- **Caido Proxy** - Container port `48080` → Random host port
+
+You can find the bound ports:
+
+```bash
+docker ps --filter "name=strix-scan-" --format "table {{.Names}}\t{{.Ports}}"
+```
+
+### Host Access
+
+The sandbox can access services on your host machine using:
+
+```
+host.docker.internal
+```
+
+This is useful for testing local applications:
+
+```bash
+# Test a local web app running on port 3000
+strix --target http://localhost:3000
+
+# Strix rewrites this to http://host.docker.internal:3000 inside the container
+```
+
+### Docker Host
+
+If you're using a remote Docker daemon, set `DOCKER_HOST`:
+
+```bash
+export DOCKER_HOST="tcp://remote-host:2375"
+```
+
+Strix automatically detects the Docker host and adjusts connection URLs:
+
+- For local Docker: Uses `127.0.0.1`
+- For remote Docker: Uses the hostname from `DOCKER_HOST`
+
+## Container Capabilities
+
+### Network Capabilities
+
+Strix containers run with elevated network capabilities:
+
+```bash
+--cap-add=NET_ADMIN
+--cap-add=NET_RAW
+```
+
+This allows:
+- Network packet manipulation
+- Raw socket access
+- Custom network configurations
+- Advanced network reconnaissance
+
+<Note>
+  These capabilities are required for certain security testing techniques. They are isolated to the container and do not affect your host system.
+</Note>
+
+## Workspace Mounts
+
+### Local Source Code
+
+When testing local code, Strix automatically copies it to the container:
+
+```bash
+strix --target ./my-app
+
+# Code is copied to /workspace inside the container
+```
+
+Strix mounts local directories as:
+- **Path inside container**: `/workspace/{directory-name}`
+- **Ownership**: `pentester:pentester` (non-root)
+- **Permissions**: `755` (readable and executable)
+
+### Multi-Target Mounts
+
+With multiple local targets, each is mounted separately:
+
+```bash
+strix --target ./frontend --target ./backend
+
+# /workspace/frontend
+# /workspace/backend
+```
+
+## Resource Limits
+
+By default, Strix containers have no resource limits. You can add limits using Docker configuration:
+
+### Memory Limit
+
+Edit Docker daemon configuration (`/etc/docker/daemon.json`):
+
+```json
+{
+  "default-ulimits": {
+    "memlock": {
+      "Name": "memlock",
+      "Hard": 8589934592,
+      "Soft": 8589934592
+    }
+  }
+}
+```
+
+Or use Docker Compose for custom resource limits (not directly supported by Strix).
+
+### CPU Limit
+
+Similarly, you can configure CPU limits in Docker daemon configuration.
+
+<Note>
+  Resource limits are not currently exposed as Strix configuration options. You'll need to configure them at the Docker daemon level.
+</Note>
+
+## Troubleshooting
+
+### Docker Not Found
+
+If you see "Docker not found":
+
+1. Install Docker Desktop: https://www.docker.com/products/docker-desktop
+2. Ensure Docker is in your PATH: `which docker`
+3. Start Docker Desktop
+
+### Docker Not Running
+
+If you see "Docker is not available":
+
+1. Start Docker Desktop
+2. Verify it's running: `docker ps`
+3. Check Docker daemon: `docker info`
+
+### Permission Denied
+
+If you see permission errors:
+
+```bash
+# On Linux, add your user to the docker group
+sudo usermod -aG docker $USER
+
+# Log out and log back in for changes to take effect
+```
+
+### Image Pull Failed
+
+If image pull fails:
+
+1. Check your internet connection
+2. Verify you can reach GitHub Container Registry:
+   ```bash
+   curl -I https://ghcr.io
+   ```
+3. Try pulling manually:
+   ```bash
+   docker pull ghcr.io/usestrix/strix-sandbox:0.1.12
+   ```
+4. Check Docker Hub rate limits (if applicable)
+
+### Container Creation Failed
+
+If container creation fails:
+
+1. Check Docker daemon logs: `docker logs`
+2. Ensure sufficient disk space: `df -h`
+3. Remove old containers: `docker container prune`
+4. Remove old images: `docker image prune`
+
+### Tool Server Timeout
+
+If you see "Tool server failed to start":
+
+1. Increase connection timeout:
+   ```bash
+   export STRIX_SANDBOX_CONNECT_TIMEOUT="30"
+   ```
+2. Check container logs:
+   ```bash
+   docker logs strix-scan-{scan-id}
+   ```
+3. Verify container is running:
+   ```bash
+   docker ps --filter "name=strix-scan-"
+   ```
+
+### Port Conflicts
+
+Strix uses random ports to avoid conflicts. If you still encounter issues:
+
+1. Check for port exhaustion: `netstat -an | grep LISTEN`
+2. Restart Docker Desktop
+3. Remove old containers: `docker rm -f $(docker ps -a --filter "name=strix-scan-" -q)`
+
+## Performance Optimization
+
+### Container Reuse
+
+To maximize performance, let Strix reuse containers:
+
+```bash
+# Multiple scans reuse the same container
+strix --target https://app.com
+strix --target https://app.com  # Reuses container from first scan
+```
+
+### Disk Space
+
+Periodically clean up old containers and images:
+
+```bash
+# Remove stopped containers
+docker container prune -f
+
+# Remove unused images
+docker image prune -a -f
+
+# Remove unused volumes
+docker volume prune -f
+```
+
+### Resource Allocation
+
+Allocate sufficient resources to Docker Desktop:
+
+1. Open Docker Desktop settings
+2. Increase CPU and memory allocation
+3. Recommended: 4+ CPUs, 8+ GB RAM
+
+## See Also
+
+- [Environment Variables](/configuration/environment-variables)
+- [Config File](/configuration/config-file)
+- [Docker Documentation](https://docs.docker.com/)

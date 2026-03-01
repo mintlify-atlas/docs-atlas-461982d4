@@ -1,0 +1,146 @@
+---
+title: Vulnerability Skills
+description: Specialized skills for testing core vulnerability classes in web applications
+---
+
+Vulnerability skills provide Strix agents with advanced testing techniques for specific vulnerability classes. Each skill includes exploitation patterns, bypass techniques, validation methods, and false positive identification to help agents conduct thorough security testing.
+
+## Available Vulnerability Skills
+
+<CardGroup cols={2}>
+  <Card title="SQL Injection" icon="database">
+    Union, blind, error-based, and ORM bypass techniques. Covers MySQL, PostgreSQL, MSSQL, and Oracle primitives with modern JSON/JSONB exploitation.
+  </Card>
+  <Card title="XSS" icon="code">
+    Reflected, stored, and DOM-based XSS testing with CSP bypass techniques. Framework-specific sinks for React, Vue, Angular, and Svelte.
+  </Card>
+  <Card title="IDOR" icon="key">
+    Object-level authorization failures (BOLA/IDOR) for cross-account data access. GraphQL, WebSocket, and multi-tenant testing patterns.
+  </Card>
+  <Card title="Authentication (JWT)" icon="lock">
+    JWT and OIDC security testing covering token forgery, algorithm confusion, and claim manipulation across microservices.
+  </Card>
+  <Card title="Business Logic" icon="diagram-project">
+    Workflow bypass, state manipulation, and domain invariant violations in financial, e-commerce, and SaaS contexts.
+  </Card>
+  <Card title="CSRF" icon="shield-halved">
+    Cross-site request forgery testing including token bypass and SameSite exploitation patterns.
+  </Card>
+  <Card title="SSRF" icon="globe">
+    Server-side request forgery covering internal service access, cloud metadata endpoints, and protocol smuggling.
+  </Card>
+  <Card title="RCE" icon="terminal">
+    Remote code execution through deserialization, template injection, and unsafe expression evaluation.
+  </Card>
+  <Card title="Path Traversal" icon="folder-tree">
+    Local file inclusion, remote file inclusion, and directory traversal with encoding bypass techniques.
+  </Card>
+  <Card title="XXE" icon="file-code">
+    XML external entity attacks for file disclosure, SSRF, and denial of service through parser exploitation.
+  </Card>
+  <Card title="File Upload" icon="upload">
+    Insecure file upload testing including content-type bypass, polyglot files, and execution context exploitation.
+  </Card>
+  <Card title="Mass Assignment" icon="pen-to-square">
+    Parameter binding vulnerabilities enabling privilege escalation and unauthorized field modification.
+  </Card>
+  <Card title="Open Redirect" icon="arrow-turn-up">
+    URL redirection testing for phishing, OAuth bypass, and SSRF chaining opportunities.
+  </Card>
+  <Card title="Information Disclosure" icon="circle-info">
+    Sensitive data exposure through error messages, debug endpoints, and metadata leakage.
+  </Card>
+  <Card title="Race Conditions" icon="clock">
+    Time-of-check to time-of-use vulnerabilities in financial transactions, quotas, and resource allocation.
+  </Card>
+  <Card title="Authorization (Function-Level)" icon="user-lock">
+    Broken function-level authorization testing for vertical and horizontal privilege escalation.
+  </Card>
+  <Card title="Subdomain Takeover" icon="sitemap">
+    DNS record exploitation for subdomain hijacking across cloud providers and CDN services.
+  </Card>
+</CardGroup>
+
+## Skill Structure
+
+Each vulnerability skill includes:
+
+### Attack Surface
+Identification of vulnerable components, integration points, and input locations specific to the vulnerability class.
+
+### Key Vulnerabilities
+Core exploitation patterns with practical examples and variations. Includes framework-specific techniques and modern variants.
+
+### Bypass Techniques
+Methods to evade common defenses including WAFs, input filters, and validation mechanisms.
+
+### Testing Methodology
+Step-by-step process for identifying, confirming, and validating the vulnerability across different contexts.
+
+### Validation Requirements
+Criteria for confirming true positives with reproducible evidence and impact demonstration.
+
+### False Positives
+Common scenarios that appear vulnerable but are properly mitigated, helping agents avoid reporting noise.
+
+## Example: SQL Injection Skill
+
+The SQL injection skill provides comprehensive coverage including:
+
+- **Database-specific primitives** for MySQL, PostgreSQL, MSSQL, and Oracle
+- **Detection channels**: error-based, boolean-based, time-based, and out-of-band (OAST)
+- **Modern techniques**: JSON/JSONB operators, ORM bypass, query builder exploitation
+- **Bypass methods**: whitespace alternatives, keyword splitting, encoding tricks
+- **Validation**: reliable oracle demonstration, metadata extraction, defense-in-depth bypass
+
+Agents using this skill can test SQL injection across different database engines, ORMs, and query contexts with advanced techniques beyond basic payloads.
+
+## Example: XSS Skill
+
+The XSS skill covers:
+
+- **Context encoding rules** for HTML, attributes, JavaScript, CSS, and SVG
+- **DOM XSS sources and sinks** with modern framework patterns
+- **Mutation XSS** leveraging parser repair behavior
+- **CSP bypass** through script gadgets, JSONP endpoints, and import maps
+- **Framework-specific sinks** for React (dangerouslySetInnerHTML), Vue (v-html), Angular ($sce), Svelte (`{@html}`)
+
+Agents equipped with this skill understand context-specific exploitation and can bypass modern defense mechanisms.
+
+## When to Use Vulnerability Skills
+
+Load vulnerability skills when:
+
+- Testing for specific vulnerability classes in your application
+- You need advanced exploitation techniques beyond basic payloads
+- The target uses specific frameworks or databases requiring specialized knowledge
+- Defense mechanisms require bypass techniques
+- You want comprehensive coverage including validation and false positive identification
+
+You can combine up to 5 skills per agent, mixing vulnerability skills with framework and technology skills for specialized testing.
+
+## Combining Skills
+
+Vulnerability skills work effectively with framework and technology skills:
+
+```python
+# Test authentication in a FastAPI application
+create_agent(
+    task="Test JWT authentication and IDOR vulnerabilities",
+    skills="authentication_jwt,idor,fastapi"
+)
+
+# Test a Next.js application for XSS
+create_agent(
+    task="Test for XSS vulnerabilities in server components",
+    skills="xss,nextjs"
+)
+
+# Test Supabase application for authorization issues
+create_agent(
+    task="Test Row Level Security implementation",
+    skills="idor,business_logic,supabase"
+)
+```
+
+By combining vulnerability skills with framework-specific knowledge, agents can apply advanced techniques in the appropriate context.

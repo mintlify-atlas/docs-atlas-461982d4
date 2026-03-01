@@ -1,0 +1,138 @@
+---
+title: "Introduction"
+description: "Open-source AI hackers to find and fix your app's vulnerabilities"
+---
+
+<img
+  className="block"
+  src="https://github.com/usestrix/.github/raw/main/imgs/cover.png"
+  alt="Strix Banner"
+/>
+
+## What is Strix?
+
+Strix is an open-source AI-powered penetration testing tool that uses autonomous agents to find and validate vulnerabilities in your applications. Built for developers and security teams who need fast, accurate security testing without the overhead of manual pentesting or the false positives of static analysis tools.
+
+Strix agents act just like real hackers — they run your code dynamically, find vulnerabilities, and validate them through actual proof-of-concepts.
+
+## Key capabilities
+
+<CardGroup cols={2}>
+  <Card title="Full hacker toolkit" icon="toolbox">
+    Complete security testing environment with HTTP proxy, browser automation, terminal access, and custom exploit development
+  </Card>
+  <Card title="Teams of agents" icon="users">
+    Multi-agent orchestration that collaborates and scales for comprehensive coverage
+  </Card>
+  <Card title="Real validation" icon="shield-check">
+    Proof-of-concepts that prove vulnerabilities exist, not just static analysis warnings
+  </Card>
+  <Card title="Developer-first CLI" icon="terminal">
+    Command-line interface with actionable reports and CI/CD integration
+  </Card>
+</CardGroup>
+
+## What can Strix detect?
+
+Strix can identify and validate a wide range of security vulnerabilities:
+
+- **Access control** - IDOR, privilege escalation, auth bypass
+- **Injection attacks** - SQL, NoSQL, command injection
+- **Server-side** - SSRF, XXE, deserialization flaws
+- **Client-side** - XSS, prototype pollution, DOM vulnerabilities
+- **Business logic** - Race conditions, workflow manipulation
+- **Authentication** - JWT vulnerabilities, session management
+- **Infrastructure** - Misconfigurations, exposed services
+
+## Use cases
+
+<AccordionGroup>
+  <Accordion title="Application security testing" icon="magnifying-glass-chart">
+    Detect and validate critical vulnerabilities in your applications before they reach production. Get detailed PoCs and remediation guidance for each finding.
+  </Accordion>
+  <Accordion title="Rapid penetration testing" icon="bolt">
+    Complete penetration tests in hours, not weeks. Generate compliance-ready reports with validated findings and reproduction steps.
+  </Accordion>
+  <Accordion title="Bug bounty automation" icon="bug">
+    Automate bug bounty research and generate proof-of-concepts for faster reporting. Discover vulnerabilities that traditional scanners miss.
+  </Accordion>
+  <Accordion title="CI/CD integration" icon="code-branch">
+    Run security tests in your CI/CD pipeline to block vulnerabilities before they reach production. Exit with non-zero code when vulnerabilities are found.
+  </Accordion>
+</AccordionGroup>
+
+## How it works
+
+Strix combines multiple specialized AI agents, each equipped with professional security testing tools:
+
+1. **Reconnaissance** - Maps your attack surface and discovers assets
+2. **Code analysis** - Reviews source code for security vulnerabilities
+3. **Dynamic testing** - Interacts with running applications to find flaws
+4. **Validation** - Creates proof-of-concepts to confirm vulnerabilities
+5. **Reporting** - Documents findings with reproduction steps and fixes
+
+The agents work together in a coordinated graph, sharing discoveries and building on each other's findings to achieve comprehensive coverage.
+
+## Get started
+
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Get your first security scan running in minutes
+  </Card>
+  <Card
+    title="Installation"
+    icon="download"
+    href="/installation"
+  >
+    Install Strix and configure your environment
+  </Card>
+  <Card
+    title="Basic usage"
+    icon="terminal"
+    href="/usage/basic-usage"
+  >
+    Learn the core commands and workflows
+  </Card>
+  <Card
+    title="Configuration"
+    icon="gear"
+    href="/configuration/environment-variables"
+  >
+    Configure LLM providers and settings
+  </Card>
+</CardGroup>
+
+## Strix platform
+
+Try the full-stack security platform at [app.strix.ai](https://app.strix.ai) — sign up for free, connect your repos and domains, and launch a pentest in minutes.
+
+- Validated findings with PoCs and reproduction steps
+- One-click autofix as ready-to-merge pull requests
+- Continuous monitoring across code, cloud, and infrastructure
+- Integrations with GitHub, Slack, Jira, Linear, and CI/CD
+- Continuous learning that builds on past findings
+
+## Community and support
+
+<CardGroup cols={2}>
+  <Card title="Discord" icon="discord" href="https://discord.gg/strix-ai">
+    Join our community for help and discussions
+  </Card>
+  <Card title="GitHub" icon="github" href="https://github.com/usestrix/strix">
+    Star the repo and contribute
+  </Card>
+  <Card title="Documentation" icon="book" href="/usage/basic-usage">
+    Read the full documentation
+  </Card>
+  <Card title="Contributing" icon="code-pull-request" href="/resources/contributing">
+    Contribute code, docs, and skills
+  </Card>
+</CardGroup>
+
+<Warning>
+  Only test applications you own or have explicit permission to test. You are responsible for using Strix ethically and legally.
+</Warning>

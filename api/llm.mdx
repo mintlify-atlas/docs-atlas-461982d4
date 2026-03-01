@@ -1,0 +1,421 @@
+---
+title: 'LLM API'
+description: 'Configure and interact with language models'
+icon: 'brain'
+---
+
+## Overview
+
+The LLM API provides a unified interface for interacting with various language models. Strix uses LiteLLM under the hood to support multiple providers.
+
+## LLM Class
+
+Main class for LLM interactions.
+
+### Constructor
+
+```python
+from strix.llm import LLM, LLMConfig
+
+llm = LLM(
+    config: LLMConfig,
+    agent_name: str | None = None
+)
+```
+
+<ParamField path="config" type="LLMConfig" required>
+  LLM configuration object
+</ParamField>
+
+<ParamField path="agent_name" type="str | None">
+  Name of the agent using this LLM
+</ParamField>
+
+**Example:**
+```python
+from strix.llm import LLM, LLMConfig
+
+config = LLMConfig(
+    model_name="claude-3-5-sonnet-20241022",
+    scan_mode="standard"
+)
+
+llm = LLM(config, agent_name="SecurityScanner")
+```
+
+### Properties
+
+<ResponseField name="config" type="LLMConfig">
+  LLM configuration
+</ResponseField>
+
+<ResponseField name="agent_name" type="str | None">
+  Associated agent name
+</ResponseField>
+
+<ResponseField name="agent_id" type="str | None">
+  Associated agent ID
+</ResponseField>
+
+<ResponseField name="system_prompt" type="str">
+  Loaded system prompt
+</ResponseField>
+
+### Methods
+
+#### generate
+
+```python
+async def generate(
+    conversation_history: list[dict[str, Any]]
+) -> AsyncIterator[LLMResponse]
+```
+
+Generates a streaming response from the LLM.
+
+<ParamField path="conversation_history" type="list[dict[str, Any]]" required>
+  List of message dictionaries with "role" and "content" keys
+</ParamField>
+
+<ResponseField name="return" type="AsyncIterator[LLMResponse]">
+  Async iterator yielding LLMResponse objects
+</ResponseField>
+
+**Example:**
+```python
+messages = [
+    {"role": "user", "content": "Analyze this HTTP response for security issues"}
+]
+
+async for response in llm.generate(messages):
+    print(response.content, end="", flush=True)
+    
+    # Check for tool invocations
+    if response.tool_invocations:
+        print(f"\nTools to execute: {response.tool_invocations}")
+```
+
+#### set_agent_identity
+
+```python
+def set_agent_identity(
+    agent_name: str | None,
+    agent_id: str | None
+) -> None
+```
+
+Sets the agent identity for telemetry.
+
+<ParamField path="agent_name" type="str | None">
+  Agent name
+</ParamField>
+
+<ParamField path="agent_id" type="str | None">
+  Agent ID
+</ParamField>
+
+## LLMConfig
+
+Configuration for LLM behavior and model selection.
+
+### Constructor
+
+```python
+from strix.llm import LLMConfig
+
+config = LLMConfig(
+    model_name: str | None = None,
+    enable_prompt_caching: bool = True,
+    skills: list[str] | None = None,
+    timeout: int | None = None,
+    scan_mode: str = "deep"
+)
+```
+
+<ParamField path="model_name" type="str | None">
+  Model identifier (defaults to STRIX_LLM environment variable)
+</ParamField>
+
+<ParamField path="enable_prompt_caching" type="bool" default="True">
+  Enable prompt caching for supported providers (Anthropic)
+</ParamField>
+
+<ParamField path="skills" type="list[str] | None">
+  List of skill names to load for this configuration
+</ParamField>
+
+<ParamField path="timeout" type="int | None">
+  Request timeout in seconds (defaults to 300)
+</ParamField>
+
+<ParamField path="scan_mode" type="str" default="'deep'">
+  Scan mode: "quick", "standard", or "deep"
+</ParamField>
+
+**Example:**
+```python
+from strix.llm import LLMConfig
+
+# Basic configuration
+config = LLMConfig(
+    model_name="claude-3-5-sonnet-20241022",
+    scan_mode="standard"
+)
+
+# Advanced configuration
+advanced_config = LLMConfig(
+    model_name="gpt-4o",
+    enable_prompt_caching=False,
+    skills=["web_security", "api_testing"],
+    timeout=600,
+    scan_mode="deep"
+)
+```
+
+### Properties
+
+<ResponseField name="model_name" type="str">
+  Model name as configured
+</ResponseField>
+
+<ResponseField name="litellm_model" type="str">
+  Model name formatted for LiteLLM
+</ResponseField>
+
+<ResponseField name="canonical_model" type="str">
+  Canonical model name for cost calculation
+</ResponseField>
+
+<ResponseField name="api_key" type="str | None">
+  API key from environment or config
+</ResponseField>
+
+<ResponseField name="api_base" type="str | None">
+  API base URL
+</ResponseField>
+
+<ResponseField name="enable_prompt_caching" type="bool">
+  Whether prompt caching is enabled
+</ResponseField>
+
+<ResponseField name="skills" type="list[str]">
+  Loaded skills
+</ResponseField>
+
+<ResponseField name="timeout" type="int">
+  Request timeout in seconds
+</ResponseField>
+
+<ResponseField name="scan_mode" type="str">
+  Current scan mode
+</ResponseField>
+
+## LLMResponse
+
+Response from an LLM generation.
+
+```python
+@dataclass
+class LLMResponse:
+    content: str
+    tool_invocations: list[dict[str, Any]] | None = None
+    thinking_blocks: list[dict[str, Any]] | None = None
+```
+
+<ResponseField name="content" type="str">
+  Generated text content
+</ResponseField>
+
+<ResponseField name="tool_invocations" type="list[dict[str, Any]] | None">
+  Parsed tool invocations from the response
+</ResponseField>
+
+<ResponseField name="thinking_blocks" type="list[dict[str, Any]] | None">
+  Extended thinking blocks (for reasoning models like o1)
+</ResponseField>
+
+**Example:**
+```python
+async for response in llm.generate(messages):
+    if response.tool_invocations:
+        for tool in response.tool_invocations:
+            print(f"Tool: {tool['toolName']}")
+            print(f"Args: {tool['args']}")
+    
+    if response.thinking_blocks:
+        print("Model reasoning:")
+        for block in response.thinking_blocks:
+            print(block.get("thinking", ""))
+```
+
+## Supported Models
+
+### Strix Models
+
+Hosted models with prefix `strix/`:
+
+```python
+config = LLMConfig(model_name="strix/claude-3-5-sonnet-20241022")
+```
+
+### Anthropic
+
+```python
+# Set environment variable
+export STRIX_LLM=anthropic/claude-3-5-sonnet-20241022
+export LLM_API_KEY=sk-ant-...
+
+config = LLMConfig()  # Uses environment variables
+```
+
+### OpenAI
+
+```python
+export STRIX_LLM=gpt-4o
+export LLM_API_KEY=sk-...
+
+config = LLMConfig()
+```
+
+### Custom Providers
+
+```python
+export STRIX_LLM=custom-model
+export LLM_API_BASE=https://api.example.com/v1
+export LLM_API_KEY=your-key
+
+config = LLMConfig()
+```
+
+## Error Handling
+
+### LLMRequestFailedError
+
+```python
+from strix.llm import LLMRequestFailedError
+
+class LLMRequestFailedError(Exception):
+    def __init__(
+        message: str,
+        details: str | None = None
+    )
+```
+
+Raised when an LLM request fails.
+
+<ParamField path="message" type="str" required>
+  Error message
+</ParamField>
+
+<ParamField path="details" type="str | None">
+  Additional error details
+</ParamField>
+
+**Example:**
+```python
+from strix.llm import LLM, LLMConfig, LLMRequestFailedError
+
+try:
+    llm = LLM(LLMConfig(model_name="gpt-4o"))
+    async for response in llm.generate(messages):
+        print(response.content)
+except LLMRequestFailedError as e:
+    print(f"LLM request failed: {e.message}")
+    if e.details:
+        print(f"Details: {e.details}")
+```
+
+## Scan Modes
+
+Scan modes affect the reasoning effort and system prompts:
+
+<ParamField path="quick" type="Scan Mode">
+  Fast scanning with medium reasoning effort. Best for quick assessments.
+</ParamField>
+
+<ParamField path="standard" type="Scan Mode">
+  Balanced scanning with high reasoning effort. Recommended for most use cases.
+</ParamField>
+
+<ParamField path="deep" type="Scan Mode">
+  Thorough scanning with high reasoning effort. Best for comprehensive security assessments.
+</ParamField>
+
+**Example:**
+```python
+# Quick scan
+quick_config = LLMConfig(
+    model_name="claude-3-5-sonnet-20241022",
+    scan_mode="quick"
+)
+
+# Deep scan
+deep_config = LLMConfig(
+    model_name="claude-3-5-sonnet-20241022",
+    scan_mode="deep"
+)
+```
+
+## Environment Variables
+
+<ParamField path="STRIX_LLM" type="str" required>
+  Model name (e.g., "claude-3-5-sonnet-20241022", "gpt-4o")
+</ParamField>
+
+<ParamField path="LLM_API_KEY" type="str" required>
+  API key for the provider
+</ParamField>
+
+<ParamField path="LLM_API_BASE" type="str" default="None">
+  Custom API base URL
+</ParamField>
+
+<ParamField path="LLM_TIMEOUT" type="str" default="'300'">
+  Request timeout in seconds
+</ParamField>
+
+<ParamField path="STRIX_REASONING_EFFORT" type="str" default="'high'">
+  Reasoning effort: "low", "medium", or "high"
+</ParamField>
+
+<ParamField path="STRIX_LLM_MAX_RETRIES" type="str" default="'5'">
+  Maximum retry attempts for failed requests
+</ParamField>
+
+## Full Example
+
+```python
+import asyncio
+from strix.llm import LLM, LLMConfig, LLMRequestFailedError
+
+async def main():
+    # Configure LLM
+    config = LLMConfig(
+        model_name="claude-3-5-sonnet-20241022",
+        enable_prompt_caching=True,
+        timeout=300,
+        scan_mode="standard"
+    )
+    
+    llm = LLM(config, agent_name="TestAgent")
+    
+    # Prepare messages
+    messages = [
+        {"role": "user", "content": "What are the OWASP Top 10?"}
+    ]
+    
+    try:
+        # Stream response
+        full_content = ""
+        async for response in llm.generate(messages):
+            full_content = response.content
+            print(response.content, end="", flush=True)
+        
+        print(f"\n\nFinal response length: {len(full_content)}")
+        
+    except LLMRequestFailedError as e:
+        print(f"Error: {e.message}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```

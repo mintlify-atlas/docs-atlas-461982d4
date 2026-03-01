@@ -1,0 +1,558 @@
+---
+title: Multi-Target Testing
+description: Test multiple targets simultaneously for comprehensive security coverage
+---
+
+Multi-target testing allows you to assess multiple targets in a single Strix scan. This is especially powerful for white-box and grey-box testing where you want to analyze both source code and deployed applications together.
+
+## Overview
+
+Specify multiple targets by using the `--target` (or `-t`) flag multiple times:
+
+```bash
+strix --target <target1> --target <target2> --target <target3>
+```
+
+Each target can be any supported type: local code, repository, web application, domain, or IP address.
+
+<Note>
+Strix processes all targets in parallel, using specialized agents to coordinate findings across different target types.
+</Note>
+
+## Why Multi-Target Testing?
+
+Multi-target testing enables powerful security assessment scenarios:
+
+### White-Box Testing
+
+Analyze both source code and deployed application:
+
+```bash
+strix --target https://github.com/org/app --target https://app.example.com
+```
+
+Strix correlates findings between source and runtime, identifying:
+- Vulnerabilities visible in code that manifest in deployment
+- Configuration issues not apparent from code alone
+- Security gaps between development and production
+
+### Multi-Environment Testing
+
+Test staging and production simultaneously:
+
+```bash
+strix --target https://staging.example.com --target https://prod.example.com
+```
+
+Identify environment-specific issues:
+- Configuration differences
+- Environment-dependent vulnerabilities
+- Deployment inconsistencies
+
+### Comprehensive Coverage
+
+Test local code with multiple deployment targets:
+
+```bash
+strix --target ./my-project \
+  --target https://staging.example.com \
+  --target https://prod.example.com
+```
+
+## Basic Examples
+
+### Source Code + Deployed App
+
+Classic white-box testing scenario:
+
+<CodeGroup>
+```bash GitHub + Production
+strix --target https://github.com/user/repo --target https://example.com
+```
+
+```bash Local + Staging
+strix --target ./my-app --target https://staging.example.com
+```
+
+```bash Git SSH + Production
+strix --target git@github.com:user/repo.git --target https://example.com
+```
+</CodeGroup>
+
+### Multiple Deployments
+
+Test different environments:
+
+```bash
+strix --target https://dev.example.com \
+  --target https://staging.example.com \
+  --target https://prod.example.com
+```
+
+### Mixed Target Types
+
+Combine different target types:
+
+```bash
+strix --target ./local-code \
+  --target https://github.com/org/repo \
+  --target https://api.example.com \
+  --target example.com
+```
+
+## Advanced Use Cases
+
+### Microservices Architecture
+
+Test multiple services together:
+
+```bash
+strix --target https://api.example.com \
+  --target https://auth.example.com \
+  --target https://payments.example.com \
+  --target https://admin.example.com
+```
+
+Strix identifies:
+- Cross-service authentication issues
+- Service-to-service communication vulnerabilities
+- Privilege escalation across microservices
+- API gateway bypass techniques
+
+**Terminal output:**
+```
+[STRIX]
+Targets: 4 services
+
+[12:15:22] Mapping attack surface across services...
+[12:18:45] Testing cross-service authentication...
+[12:25:33] Found JWT reuse vulnerability between api and auth services
+[12:42:18] Discovered IDOR in admin service
+[12:58:44] Validated privilege escalation chain: api → auth → admin
+
+Scan completed
+Vulnerabilities found: 11 (4 critical, 5 high, 2 medium)
+```
+
+### Frontend + Backend + Infrastructure
+
+Comprehensive full-stack assessment:
+
+```bash
+strix --target https://github.com/org/frontend \
+  --target https://github.com/org/backend \
+  --target https://app.example.com \
+  --target api.example.com
+```
+
+Covers:
+- Client-side vulnerabilities in frontend code
+- Server-side vulnerabilities in backend code
+- Runtime issues in deployed frontend
+- API security in deployed backend
+
+### Repository + Multiple Environments
+
+White-box testing across deployment pipeline:
+
+```bash
+strix --target https://github.com/org/app \
+  --target http://localhost:3000 \
+  --target https://staging.example.com \
+  --target https://prod.example.com
+```
+
+Identifies:
+- Code-level vulnerabilities
+- Development environment issues
+- Staging-specific configurations
+- Production security gaps
+
+<Note>
+When testing localhost, Strix automatically rewrites the target to be accessible from within Docker containers.
+</Note>
+
+### Multiple Repositories
+
+Analyze related codebases:
+
+```bash
+strix --target https://github.com/org/api \
+  --target https://github.com/org/web \
+  --target https://github.com/org/mobile-backend
+```
+
+Finds:
+- Shared vulnerability patterns
+- Cross-repository security issues
+- Common dependency vulnerabilities
+- Inconsistent security implementations
+
+## Combining with Custom Instructions
+
+Multi-target testing works seamlessly with custom instructions:
+
+<CodeGroup>
+```bash Inline instruction
+strix --target https://github.com/org/repo \
+  --target https://staging.example.com \
+  --instruction "Focus on authentication in both code and deployed app"
+```
+
+```bash Instruction file
+strix -t ./my-app \
+  -t https://staging.example.com \
+  -t https://prod.example.com \
+  --instruction-file ./multi-env-test.txt
+```
+</CodeGroup>
+
+**multi-env-test.txt:**
+```text
+Multi-Environment Security Assessment
+
+## Targets
+1. ./my-app - Source code analysis
+2. https://staging.example.com - Staging environment
+3. https://prod.example.com - Production environment
+
+## Test Strategy
+
+### Source Code (./my-app)
+- Static analysis for common vulnerabilities
+- Dependency scanning
+- Security misconfigurations in code
+
+### Staging Environment
+- Full authenticated testing
+- Business logic vulnerability testing
+- Credentials: staging-user@test.com / StagingPass123!
+
+### Production Environment
+- Non-destructive testing only
+- Authentication and authorization checks
+- Public endpoint security
+
+## Focus Areas
+1. Compare authentication implementation between code and deployments
+2. Validate API authorization across environments
+3. Check for environment-specific configuration issues
+```
+
+## Target Organization
+
+Strix organizes multi-target results in structured output:
+
+```
+strix_runs/multi-target-20260301-123456/
+├── report.md                    # Comprehensive report across all targets
+├── findings.json                # All findings with target correlation
+├── targets/
+│   ├── github-org-repo/        # Repository analysis
+│   │   ├── code-findings.json
+│   │   └── static-analysis/
+│   ├── staging-example-com/    # Staging environment
+│   │   ├── runtime-findings.json
+│   │   └── proof-of-concepts/
+│   └── prod-example-com/       # Production environment
+│       ├── runtime-findings.json
+│       └── proof-of-concepts/
+└── cross-target-analysis/      # Findings spanning multiple targets
+    ├── correlations.json
+    └── attack-chains.md
+```
+
+## Example Workflows
+
+### Workflow 1: White-Box Web Application Test
+
+<Steps>
+  <Step title="Prepare targets">
+    Identify your source code and deployment:
+    
+    - Source: `https://github.com/myorg/webapp`
+    - Deployment: `https://app.example.com`
+  </Step>
+
+  <Step title="Create instructions">
+    Create `webapp-whitebox.txt`:
+    
+    ```text
+    White-box security assessment
+    
+    Test credentials: testuser@example.com / TestPass123!
+    
+    Focus areas:
+    1. Authentication vulnerabilities in code and runtime
+    2. IDOR in user management (check both code and API)
+    3. Business logic in payment processing
+    
+    Compare code implementation with deployed behavior.
+    ```
+  </Step>
+
+  <Step title="Run multi-target scan">
+    ```bash
+    strix --target https://github.com/myorg/webapp \
+      --target https://app.example.com \
+      --instruction-file ./webapp-whitebox.txt \
+      --scan-mode deep
+    ```
+  </Step>
+
+  <Step title="Review correlated findings">
+    Strix reports findings with cross-target correlation:
+    
+    ```
+    [CRITICAL] SQL Injection in User Search
+    
+    Found in:
+    - Source: src/api/users.py:45 (vulnerable parameterization)
+    - Runtime: https://app.example.com/api/users?search=
+    
+    The vulnerable code pattern identified in the repository 
+    was confirmed exploitable in the deployed application.
+    
+    Proof of concept: proof-of-concepts/sql-injection-users.py
+    ```
+  </Step>
+</Steps>
+
+### Workflow 2: Microservices Security Review
+
+<Steps>
+  <Step title="List all services">
+    ```bash
+    # Main API
+    TARGET1=https://api.example.com
+    
+    # Authentication service
+    TARGET2=https://auth.example.com
+    
+    # Admin panel
+    TARGET3=https://admin.example.com
+    
+    # Payment service
+    TARGET4=https://payments.example.com
+    ```
+  </Step>
+
+  <Step title="Run comprehensive scan">
+    ```bash
+    strix -t $TARGET1 -t $TARGET2 -t $TARGET3 -t $TARGET4 \
+      --instruction "Test cross-service authentication and authorization" \
+      --scan-mode deep
+    ```
+  </Step>
+
+  <Step title="Analyze cross-service vulnerabilities">
+    Strix identifies vulnerabilities spanning multiple services:
+    
+    ```
+    [HIGH] Cross-Service JWT Reuse
+    
+    Targets affected:
+    - https://api.example.com
+    - https://auth.example.com
+    - https://admin.example.com
+    
+    JWT tokens issued by auth.example.com are accepted 
+    without validation by admin.example.com, allowing 
+    privilege escalation.
+    ```
+  </Step>
+</Steps>
+
+### Workflow 3: Full Development Pipeline Test
+
+<Steps>
+  <Step title="Define all environments">
+    ```bash
+    # Local development
+    strix -t ./my-app \
+      -t http://localhost:3000 \
+      -t https://dev.example.com \
+      -t https://staging.example.com \
+      -t https://prod.example.com \
+      --scan-mode standard
+    ```
+  </Step>
+
+  <Step title="Review environment differences">
+    Strix highlights configuration differences:
+    
+    ```
+    [MEDIUM] Debug Mode Enabled in Production
+    
+    - ./my-app: DEBUG=false (correct)
+    - localhost:3000: DEBUG=true (expected in dev)
+    - dev.example.com: DEBUG=true (expected in dev)
+    - staging.example.com: DEBUG=false (correct)
+    - prod.example.com: DEBUG=true (MISCONFIGURATION)
+    
+    Production environment has debug mode enabled, 
+    exposing sensitive error messages.
+    ```
+  </Step>
+</Steps>
+
+## Best Practices
+
+<Steps>
+  <Step title="Group related targets">
+    Test targets that share security context together:
+    
+    **Good:** Source + deployment of same app
+    ```bash
+    strix -t https://github.com/org/app -t https://app.example.com
+    ```
+    
+    **Less useful:** Unrelated applications
+    ```bash
+    strix -t https://app1.example.com -t https://unrelated-app2.com
+    ```
+  </Step>
+
+  <Step title="Use descriptive instructions">
+    Guide Strix on how to correlate targets:
+    
+    ```bash
+    strix -t ./api -t https://api.example.com \
+      --instruction "Compare authentication implementation in code vs runtime"
+    ```
+  </Step>
+
+  <Step title="Consider scan mode">
+    Multi-target scans take longer - choose appropriate mode:
+    
+    - **Quick:** 2-3 targets, CI/CD
+    - **Standard:** 3-5 targets, development testing
+    - **Deep:** 1-3 targets, comprehensive review
+  </Step>
+
+  <Step title="Organize results">
+    Use meaningful run names by testing related targets:
+    
+    Strix auto-generates names like:
+    - `multi-target-20260301-123456` (multiple targets)
+    - `myapp-staging-prod-20260301-123456` (specific targets)
+  </Step>
+</Steps>
+
+## Limitations and Considerations
+
+### Performance
+
+Multi-target scans take longer than single-target scans:
+
+- Each additional target adds time
+- Complex correlation requires more analysis
+- Use `--scan-mode quick` for faster results
+
+### Network Access
+
+Ensure all targets are accessible:
+
+```bash
+# Test accessibility first
+curl https://staging.example.com
+curl https://prod.example.com
+
+# Then run multi-target scan
+strix -t https://staging.example.com -t https://prod.example.com
+```
+
+### Docker Networking
+
+When testing localhost targets, Strix automatically handles Docker networking:
+
+```bash
+# This works - Strix rewrites localhost to be accessible from containers
+strix -t ./my-app -t http://localhost:3000
+```
+
+<Note>
+Strix automatically converts `localhost` to `host.docker.internal` (or appropriate host gateway) for Docker container access.
+</Note>
+
+## CI/CD Integration
+
+Multi-target testing in GitHub Actions:
+
+```yaml
+name: Multi-Environment Security Scan
+
+on:
+  pull_request:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Install Strix
+        run: curl -sSL https://strix.ai/install | bash
+      
+      - name: Deploy to Staging
+        run: ./deploy-staging.sh
+      
+      - name: Multi-Target Security Scan
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          strix -n \
+            -t ./ \
+            -t ${{ secrets.STAGING_URL }} \
+            --scan-mode standard
+      
+      - name: Upload Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: strix-results
+          path: strix_runs/
+```
+
+## Troubleshooting
+
+### Target Not Accessible
+
+```bash
+strix -t https://github.com/org/repo -t https://internal.example.com
+# Error: Could not access https://internal.example.com
+```
+
+**Solution:** Ensure all targets are accessible from your machine.
+
+### Empty Instruction File
+
+```bash
+strix -t ./app1 -t ./app2 --instruction-file empty.txt
+# Error: Instruction file 'empty.txt' is empty
+```
+
+**Solution:** Add content to your instruction file or remove the flag.
+
+### Both Instruction Methods
+
+```bash
+strix -t ./app1 -t ./app2 --instruction "test" --instruction-file test.txt
+# Error: Cannot specify both --instruction and --instruction-file
+```
+
+**Solution:** Choose one instruction method.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Advanced Testing" icon="flask" href="/usage/advanced-testing">
+    Learn about grey-box testing and complex scenarios
+  </Card>
+  <Card title="CI/CD Integration" icon="code-branch" href="/integrations/github-actions">
+    Integrate multi-target scans into your pipeline
+  </Card>
+</CardGroup>

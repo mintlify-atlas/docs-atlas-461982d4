@@ -1,0 +1,240 @@
+---
+title: Environment Variables
+description: Configure Strix using environment variables for LLM providers, API access, and runtime behavior
+---
+
+You can configure Strix using environment variables. Strix automatically saves your configuration to `~/.strix/cli-config.json`, so you don't need to set these variables on every run.
+
+## Required Variables
+
+<ParamField path="STRIX_LLM" type="string" required>
+  Model name to use with LiteLLM (e.g., `openai/gpt-5`, `anthropic/claude-sonnet-4-6`).
+  
+  For Strix Router, use the `strix/` prefix (e.g., `strix/gpt-5`).
+  
+  ```bash
+  export STRIX_LLM="openai/gpt-5"
+  ```
+</ParamField>
+
+## LLM Configuration
+
+<ParamField path="LLM_API_KEY" type="string">
+  API key for your LLM provider.
+  
+  Not required for local models (Ollama, LMStudio), cloud providers with built-in authentication (Vertex AI, AWS Bedrock), or when using Strix Router.
+  
+  ```bash
+  export LLM_API_KEY="your-api-key-here"
+  ```
+</ParamField>
+
+<ParamField path="LLM_API_BASE" type="string">
+  Custom API base URL for your LLM provider.
+  
+  Use this when running local models (Ollama, LMStudio) or custom endpoints. For `strix/` models, this is automatically set to Strix Router.
+  
+  ```bash
+  # For Ollama
+  export LLM_API_BASE="http://localhost:11434"
+  
+  # For LMStudio
+  export LLM_API_BASE="http://localhost:1234/v1"
+  ```
+</ParamField>
+
+<ParamField path="OPENAI_API_BASE" type="string">
+  OpenAI-specific API base URL. This is an alternative to `LLM_API_BASE` for OpenAI-compatible endpoints.
+  
+  ```bash
+  export OPENAI_API_BASE="https://api.openai.com/v1"
+  ```
+</ParamField>
+
+<ParamField path="LITELLM_BASE_URL" type="string">
+  LiteLLM-specific base URL. This is an alternative to `LLM_API_BASE` when using LiteLLM proxy.
+  
+  ```bash
+  export LITELLM_BASE_URL="http://localhost:4000"
+  ```
+</ParamField>
+
+<ParamField path="OLLAMA_API_BASE" type="string">
+  Ollama-specific API base URL. This is an alternative to `LLM_API_BASE` when using Ollama.
+  
+  ```bash
+  export OLLAMA_API_BASE="http://localhost:11434"
+  ```
+</ParamField>
+
+<ParamField path="STRIX_REASONING_EFFORT" type="string" default="high">
+  Control the reasoning effort level for LLM responses.
+  
+  **Valid values:** `none`, `minimal`, `low`, `medium`, `high`, `xhigh`
+  
+  Higher values result in more thorough analysis but slower responses. For quick scans, use `medium`.
+  
+  ```bash
+  export STRIX_REASONING_EFFORT="high"
+  ```
+</ParamField>
+
+<ParamField path="STRIX_LLM_MAX_RETRIES" type="string" default="5">
+  Maximum number of retries for LLM API calls when encountering transient errors.
+  
+  ```bash
+  export STRIX_LLM_MAX_RETRIES="5"
+  ```
+</ParamField>
+
+<ParamField path="LLM_TIMEOUT" type="string" default="300">
+  Timeout in seconds for LLM API requests.
+  
+  ```bash
+  export LLM_TIMEOUT="300"
+  ```
+</ParamField>
+
+<ParamField path="STRIX_MEMORY_COMPRESSOR_TIMEOUT" type="string" default="30">
+  Timeout in seconds for the memory compression operation.
+  
+  ```bash
+  export STRIX_MEMORY_COMPRESSOR_TIMEOUT="30"
+  ```
+</ParamField>
+
+## Tool & Feature Configuration
+
+<ParamField path="PERPLEXITY_API_KEY" type="string">
+  API key for Perplexity AI web search.
+  
+  Enables real-time research and OSINT capabilities during penetration testing. Get your API key at [perplexity.ai](https://www.perplexity.ai/).
+  
+  ```bash
+  export PERPLEXITY_API_KEY="your-perplexity-key-here"
+  ```
+</ParamField>
+
+<ParamField path="STRIX_DISABLE_BROWSER" type="string" default="false">
+  Disable browser automation tool.
+  
+  Set to `true` to prevent Strix from using browser automation (Playwright). This disables testing for XSS, CSRF, and other client-side vulnerabilities.
+  
+  ```bash
+  export STRIX_DISABLE_BROWSER="true"
+  ```
+</ParamField>
+
+## Runtime Configuration
+
+<ParamField path="STRIX_IMAGE" type="string" default="ghcr.io/usestrix/strix-sandbox:0.1.12">
+  Docker image to use for the Strix sandbox environment.
+  
+  You can override this to use a custom sandbox image or a specific version.
+  
+  ```bash
+  export STRIX_IMAGE="ghcr.io/usestrix/strix-sandbox:0.1.12"
+  ```
+</ParamField>
+
+<ParamField path="STRIX_RUNTIME_BACKEND" type="string" default="docker">
+  Runtime backend for Strix sandboxes.
+  
+  Currently, only `docker` is supported.
+  
+  ```bash
+  export STRIX_RUNTIME_BACKEND="docker"
+  ```
+</ParamField>
+
+<ParamField path="STRIX_SANDBOX_EXECUTION_TIMEOUT" type="string" default="120">
+  Timeout in seconds for sandbox tool execution.
+  
+  This controls how long Strix will wait for individual tool executions (terminal commands, Python scripts, etc.) to complete.
+  
+  ```bash
+  export STRIX_SANDBOX_EXECUTION_TIMEOUT="120"
+  ```
+</ParamField>
+
+<ParamField path="STRIX_SANDBOX_CONNECT_TIMEOUT" type="string" default="10">
+  Timeout in seconds for connecting to the sandbox tool server.
+  
+  ```bash
+  export STRIX_SANDBOX_CONNECT_TIMEOUT="10"
+  ```
+</ParamField>
+
+<ParamField path="DOCKER_HOST" type="string">
+  Docker daemon connection URL.
+  
+  By default, Strix uses the local Docker daemon. Set this to connect to a remote Docker host.
+  
+  ```bash
+  export DOCKER_HOST="tcp://remote-host:2375"
+  ```
+</ParamField>
+
+## Telemetry
+
+<ParamField path="STRIX_TELEMETRY" type="string" default="1">
+  Enable or disable anonymous telemetry.
+  
+  Set to `0` to opt out of telemetry collection. Telemetry helps improve Strix by collecting anonymous usage statistics.
+  
+  ```bash
+  export STRIX_TELEMETRY="0"
+  ```
+</ParamField>
+
+## Example Configurations
+
+### OpenAI GPT-5
+
+```bash
+export STRIX_LLM="openai/gpt-5"
+export LLM_API_KEY="sk-..."
+```
+
+### Anthropic Claude
+
+```bash
+export STRIX_LLM="anthropic/claude-sonnet-4-6"
+export LLM_API_KEY="sk-ant-..."
+```
+
+### Strix Router (Multiple Providers)
+
+```bash
+export STRIX_LLM="strix/gpt-5"
+export LLM_API_KEY="your-strix-router-key"
+```
+
+### Ollama (Local)
+
+```bash
+export STRIX_LLM="ollama/llama3.1:70b"
+export LLM_API_BASE="http://localhost:11434"
+```
+
+### With Web Search
+
+```bash
+export STRIX_LLM="openai/gpt-5"
+export LLM_API_KEY="sk-..."
+export PERPLEXITY_API_KEY="pplx-..."
+```
+
+## Configuration Persistence
+
+Strix automatically saves your environment variables to `~/.strix/cli-config.json`. This means you only need to set these variables once, and Strix will remember them for future runs.
+
+To override saved configuration temporarily, you can:
+
+1. Set environment variables in your current shell session
+2. Use a custom config file with the `--config` flag
+3. Clear a variable by setting it to an empty string: `export STRIX_LLM=""`
+
+<Note>
+  LLM configuration variables (`STRIX_LLM`, `LLM_API_KEY`, etc.) are re-validated on each run. If you change these in your environment, Strix will use the new values and update the saved configuration.
+</Note>

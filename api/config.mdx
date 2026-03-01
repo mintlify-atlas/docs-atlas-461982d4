@@ -1,0 +1,486 @@
+---
+title: 'Config API'
+description: 'Manage Strix configuration and environment variables'
+icon: 'gear'
+---
+
+## Overview
+
+The Config API provides a centralized way to manage Strix configuration through environment variables and persistent settings.
+
+## Config Class
+
+Main configuration manager for Strix.
+
+### Class Variables
+
+Configuration defaults stored as class attributes:
+
+<ResponseField name="strix_llm" type="str | None" default="None">
+  LLM model name
+</ResponseField>
+
+<ResponseField name="llm_api_key" type="str | None" default="None">
+  API key for LLM provider
+</ResponseField>
+
+<ResponseField name="llm_api_base" type="str | None" default="None">
+  Custom API base URL
+</ResponseField>
+
+<ResponseField name="strix_reasoning_effort" type="str" default="'high'">
+  Reasoning effort: "low", "medium", or "high"
+</ResponseField>
+
+<ResponseField name="strix_llm_max_retries" type="str" default="'5'">
+  Maximum retry attempts
+</ResponseField>
+
+<ResponseField name="llm_timeout" type="str" default="'300'">
+  Request timeout in seconds
+</ResponseField>
+
+<ResponseField name="strix_image" type="str" default="'ghcr.io/usestrix/strix-sandbox:0.1.12'">
+  Docker image for sandboxes
+</ResponseField>
+
+<ResponseField name="strix_runtime_backend" type="str" default="'docker'">
+  Runtime backend (currently only "docker")
+</ResponseField>
+
+<ResponseField name="strix_sandbox_execution_timeout" type="str" default="'120'">
+  Tool execution timeout in seconds
+</ResponseField>
+
+<ResponseField name="strix_telemetry" type="str" default="'1'">
+  Enable/disable telemetry
+</ResponseField>
+
+### Methods
+
+#### get
+
+```python
+@classmethod
+def get(cls, name: str) -> str | None
+```
+
+Gets a configuration value from environment or defaults.
+
+<ParamField path="name" type="str" required>
+  Configuration key in lowercase (e.g., "strix_llm")
+</ParamField>
+
+<ResponseField name="return" type="str | None">
+  Configuration value or None
+</ResponseField>
+
+**Example:**
+```python
+from strix.config import Config
+
+model = Config.get("strix_llm")
+print(f"Using model: {model}")
+
+image = Config.get("strix_image")
+print(f"Sandbox image: {image}")
+```
+
+#### config_dir
+
+```python
+@classmethod
+def config_dir(cls) -> Path
+```
+
+Returns the configuration directory path.
+
+<ResponseField name="return" type="Path">
+  Path to ~/.strix directory
+</ResponseField>
+
+**Example:**
+```python
+from strix.config import Config
+
+config_path = Config.config_dir()
+print(f"Config stored in: {config_path}")
+```
+
+#### config_file
+
+```python
+@classmethod
+def config_file(cls) -> Path
+```
+
+Returns the configuration file path.
+
+<ResponseField name="return" type="Path">
+  Path to ~/.strix/cli-config.json
+</ResponseField>
+
+#### load
+
+```python
+@classmethod
+def load(cls) -> dict[str, Any]
+```
+
+Loads configuration from the config file.
+
+<ResponseField name="return" type="dict[str, Any]">
+  Configuration dictionary
+</ResponseField>
+
+**Example:**
+```python
+from strix.config import Config
+
+config = Config.load()
+print(f"Saved environment variables: {config.get('env', {})}")
+```
+
+#### save
+
+```python
+@classmethod
+def save(cls, config: dict[str, Any]) -> bool
+```
+
+Saves configuration to the config file.
+
+<ParamField path="config" type="dict[str, Any]" required>
+  Configuration dictionary to save
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True if successful, False otherwise
+</ResponseField>
+
+**Example:**
+```python
+from strix.config import Config
+
+config_data = {
+    "env": {
+        "STRIX_LLM": "claude-3-5-sonnet-20241022",
+        "LLM_API_KEY": "sk-ant-..."
+    }
+}
+
+success = Config.save(config_data)
+if success:
+    print("Configuration saved")
+```
+
+#### apply_saved
+
+```python
+@classmethod
+def apply_saved(cls, force: bool = False) -> dict[str, str]
+```
+
+Applies saved configuration to environment variables.
+
+<ParamField path="force" type="bool" default="False">
+  Force apply even if environment variables are already set
+</ParamField>
+
+<ResponseField name="return" type="dict[str, str]">
+  Dictionary of applied environment variables
+</ResponseField>
+
+**Example:**
+```python
+from strix.config import Config
+
+# Apply saved config
+applied = Config.apply_saved()
+print(f"Applied variables: {list(applied.keys())}")
+
+# Force apply
+applied = Config.apply_saved(force=True)
+```
+
+#### save_current
+
+```python
+@classmethod
+def save_current(cls) -> bool
+```
+
+Saves current environment variables to the config file.
+
+<ResponseField name="return" type="bool">
+  True if successful
+</ResponseField>
+
+**Example:**
+```python
+import os
+from strix.config import Config
+
+# Set environment variables
+os.environ["STRIX_LLM"] = "gpt-4o"
+os.environ["LLM_API_KEY"] = "sk-..."
+
+# Save to config
+Config.save_current()
+```
+
+#### tracked_vars
+
+```python
+@classmethod
+def tracked_vars(cls) -> list[str]
+```
+
+Returns list of tracked environment variable names.
+
+<ResponseField name="return" type="list[str]">
+  List of uppercase environment variable names
+</ResponseField>
+
+**Example:**
+```python
+from strix.config import Config
+
+tracked = Config.tracked_vars()
+print(f"Tracked variables: {tracked}")
+# Output: ['STRIX_LLM', 'LLM_API_KEY', 'LLM_API_BASE', ...]
+```
+
+## Helper Functions
+
+### apply_saved_config
+
+```python
+from strix.config import apply_saved_config
+
+applied = apply_saved_config(force: bool = False) -> dict[str, str]
+```
+
+Applies saved configuration to environment.
+
+<ParamField path="force" type="bool" default="False">
+  Force apply variables
+</ParamField>
+
+<ResponseField name="return" type="dict[str, str]">
+  Applied variables
+</ResponseField>
+
+### save_current_config
+
+```python
+from strix.config import save_current_config
+
+success = save_current_config() -> bool
+```
+
+Saves current environment to config file.
+
+<ResponseField name="return" type="bool">
+  True if successful
+</ResponseField>
+
+### resolve_llm_config
+
+```python
+from strix.config import resolve_llm_config
+
+model, api_key, api_base = resolve_llm_config() -> tuple[str | None, str | None, str | None]
+```
+
+Resolves LLM configuration from environment.
+
+<ResponseField name="return" type="tuple[str | None, str | None, str | None]">
+  Tuple of (model_name, api_key, api_base)
+</ResponseField>
+
+**Example:**
+```python
+from strix.config import resolve_llm_config
+
+model, api_key, api_base = resolve_llm_config()
+
+if model:
+    print(f"Model: {model}")
+    print(f"API Base: {api_base or 'default'}")
+else:
+    print("No LLM configured")
+```
+
+## Configuration File Format
+
+The config file is stored at `~/.strix/cli-config.json`:
+
+```json
+{
+  "env": {
+    "STRIX_LLM": "claude-3-5-sonnet-20241022",
+    "LLM_API_KEY": "sk-ant-...",
+    "STRIX_IMAGE": "ghcr.io/usestrix/strix-sandbox:0.1.12",
+    "STRIX_RUNTIME_BACKEND": "docker"
+  }
+}
+```
+
+## Environment Variables
+
+### LLM Configuration
+
+<ParamField path="STRIX_LLM" type="str" required>
+  Model name (e.g., "claude-3-5-sonnet-20241022")
+</ParamField>
+
+<ParamField path="LLM_API_KEY" type="str" required>
+  API key for the provider
+</ParamField>
+
+<ParamField path="LLM_API_BASE" type="str" default="None">
+  Custom API base URL
+</ParamField>
+
+<ParamField path="OPENAI_API_BASE" type="str" default="None">
+  OpenAI-specific API base
+</ParamField>
+
+<ParamField path="LITELLM_BASE_URL" type="str" default="None">
+  LiteLLM base URL
+</ParamField>
+
+<ParamField path="OLLAMA_API_BASE" type="str" default="None">
+  Ollama API base
+</ParamField>
+
+<ParamField path="STRIX_REASONING_EFFORT" type="str" default="'high'">
+  Reasoning effort for o1 models: "low", "medium", "high"
+</ParamField>
+
+<ParamField path="STRIX_LLM_MAX_RETRIES" type="str" default="'5'">
+  Maximum retry attempts
+</ParamField>
+
+<ParamField path="STRIX_MEMORY_COMPRESSOR_TIMEOUT" type="str" default="'30'">
+  Memory compression timeout in seconds
+</ParamField>
+
+<ParamField path="LLM_TIMEOUT" type="str" default="'300'">
+  Request timeout in seconds
+</ParamField>
+
+### Runtime Configuration
+
+<ParamField path="STRIX_IMAGE" type="str" default="'ghcr.io/usestrix/strix-sandbox:0.1.12'">
+  Docker image for sandboxes
+</ParamField>
+
+<ParamField path="STRIX_RUNTIME_BACKEND" type="str" default="'docker'">
+  Runtime backend
+</ParamField>
+
+<ParamField path="STRIX_SANDBOX_EXECUTION_TIMEOUT" type="str" default="'120'">
+  Tool execution timeout in seconds
+</ParamField>
+
+<ParamField path="STRIX_SANDBOX_CONNECT_TIMEOUT" type="str" default="'10'">
+  Connection timeout in seconds
+</ParamField>
+
+### Feature Configuration
+
+<ParamField path="PERPLEXITY_API_KEY" type="str" default="None">
+  API key for Perplexity web search
+</ParamField>
+
+<ParamField path="STRIX_DISABLE_BROWSER" type="str" default="'false'">
+  Disable browser tools
+</ParamField>
+
+<ParamField path="STRIX_TELEMETRY" type="str" default="'1'">
+  Enable telemetry (1 or 0)
+</ParamField>
+
+## Usage Examples
+
+### Basic Configuration
+
+```python
+import os
+from strix.config import Config
+
+# Set environment variables
+os.environ["STRIX_LLM"] = "claude-3-5-sonnet-20241022"
+os.environ["LLM_API_KEY"] = "sk-ant-..."
+
+# Get configuration values
+model = Config.get("strix_llm")
+api_key = Config.get("llm_api_key")
+
+print(f"Model: {model}")
+print(f"API Key: {api_key[:10]}...")
+```
+
+### Persistent Configuration
+
+```python
+import os
+from strix.config import Config
+
+# Set configuration
+os.environ["STRIX_LLM"] = "gpt-4o"
+os.environ["LLM_API_KEY"] = "sk-..."
+os.environ["STRIX_IMAGE"] = "ghcr.io/usestrix/strix-sandbox:latest"
+
+# Save to file
+Config.save_current()
+print("Configuration saved to ~/.strix/cli-config.json")
+
+# Later, in another session
+from strix.config import apply_saved_config
+
+# Load saved configuration
+applied = apply_saved_config()
+print(f"Applied {len(applied)} variables from saved config")
+```
+
+### Custom Configuration File
+
+```python
+from pathlib import Path
+from strix.config import Config
+
+# Use custom config file
+Config._config_file_override = Path("/custom/path/config.json")
+
+# Load from custom location
+config = Config.load()
+print(f"Loaded config from custom path: {config}")
+```
+
+### Checking Configuration
+
+```python
+from strix.config import Config, resolve_llm_config
+
+# Check what's configured
+model, api_key, api_base = resolve_llm_config()
+
+if not model:
+    print("ERROR: STRIX_LLM not configured")
+else:
+    print(f"Model: {model}")
+    print(f"API Base: {api_base or 'default'}")
+    print(f"Has API Key: {bool(api_key)}")
+
+# List all tracked variables
+tracked = Config.tracked_vars()
+print(f"\nTracked variables ({len(tracked)}):")
+for var in tracked:
+    value = os.environ.get(var)
+    if value:
+        display = value[:20] + "..." if len(value) > 20 else value
+        print(f"  {var}: {display}")
+```

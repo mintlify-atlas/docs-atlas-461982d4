@@ -1,0 +1,155 @@
+---
+title: CI/CD Integration
+description: Integrate Strix into your continuous integration and deployment pipelines to catch vulnerabilities before they reach production
+---
+
+You can integrate Strix into your CI/CD pipelines to automatically run security tests on every pull request, commit, or deployment. This helps you catch vulnerabilities early in the development cycle and prevent them from reaching production.
+
+## Benefits of CI/CD Integration
+
+Integrating Strix into your CI/CD pipeline provides:
+
+- **Early Detection** - Find security issues before they reach production
+- **Automated Testing** - Run security scans automatically on every code change
+- **Fast Feedback** - Get security results within your existing workflow
+- **Quality Gates** - Block deployments when critical vulnerabilities are found
+- **Developer Visibility** - Security findings appear directly in pull requests
+
+## Headless Mode
+
+Strix supports headless mode specifically designed for CI/CD environments. Use the `-n` or `--non-interactive` flag to run Strix without the interactive UI.
+
+```bash
+strix -n --target https://your-app.com
+```
+
+In headless mode, Strix:
+
+- Prints real-time vulnerability findings to stdout
+- Outputs a final report before exiting
+- Exits with a non-zero code when vulnerabilities are found
+- Perfect for servers and automated jobs
+
+## Quick Scan Mode
+
+For faster CI/CD runs, you can use quick scan mode which reduces testing depth for faster results:
+
+```bash
+strix -n --target ./ --scan-mode quick
+```
+
+You can also adjust the reasoning effort for quicker scans:
+
+```bash
+export STRIX_REASONING_EFFORT="medium"
+```
+
+<Note>
+The default reasoning effort is "high". For quick scans in CI/CD, consider using "medium" to balance speed and accuracy.
+</Note>
+
+## Environment Variables
+
+You need to configure these environment variables in your CI/CD pipeline:
+
+<Steps>
+  <Step title="Set your LLM provider">
+    Configure the AI model you want to use:
+    ```bash
+    export STRIX_LLM="openai/gpt-5"
+    ```
+    
+    You can use any [supported provider](/configuration/llm-providers) or [Strix Router](https://models.strix.ai) with a single API key.
+  </Step>
+  
+  <Step title="Add your API key">
+    Set your LLM API key as a secret:
+    ```bash
+    export LLM_API_KEY="your-api-key"
+    ```
+  </Step>
+  
+  <Step title="Optional: Configure base URL">
+    If you're using a local model or custom endpoint:
+    ```bash
+    export LLM_API_BASE="your-api-base-url"
+    ```
+  </Step>
+  
+  <Step title="Optional: Enable search capabilities">
+    Add Perplexity API key for enhanced reconnaissance:
+    ```bash
+    export PERPLEXITY_API_KEY="your-api-key"
+    ```
+  </Step>
+</Steps>
+
+## Security Considerations
+
+<Warning>
+Always store API keys and sensitive credentials as encrypted secrets in your CI/CD platform. Never commit them to your repository.
+</Warning>
+
+### Best Practices
+
+- **Use secrets management** - Store all API keys in your CI/CD platform's secrets manager
+- **Limit scope** - Run Strix only on authorized targets you own or have permission to test
+- **Set timeouts** - Configure job timeouts to prevent long-running scans in CI/CD
+- **Review findings** - Set up notifications to review security findings promptly
+- **Fail on critical** - Configure your pipeline to fail when critical vulnerabilities are detected
+
+## Target Options
+
+You can scan different types of targets in your CI/CD pipeline:
+
+<CodeGroup>
+```bash Local Codebase
+# Scan the checked-out repository
+strix -n --target ./
+```
+
+```bash Web Application
+# Test a deployed preview or staging environment
+strix -n --target https://staging.your-app.com
+```
+
+```bash Multiple Targets
+# Test both source code and deployed app
+strix -n -t https://github.com/org/repo -t https://staging.your-app.com
+```
+
+```bash Authenticated Testing
+# Provide credentials for grey-box testing
+strix -n --target https://app.com --instruction "Use credentials: user:pass"
+```
+</CodeGroup>
+
+## Exit Codes
+
+Strix uses exit codes to integrate with CI/CD pipeline logic:
+
+- **0** - No vulnerabilities found (success)
+- **Non-zero** - Vulnerabilities detected or execution error (failure)
+
+You can use these exit codes to create quality gates in your pipeline.
+
+## Platform-Specific Guides
+
+See the platform-specific integration guides:
+
+<CardGroup cols={2}>
+  <Card title="GitHub Actions" icon="github" href="/integrations/github-actions">
+    Complete GitHub Actions workflow examples
+  </Card>
+  <Card title="GitLab CI" icon="gitlab" href="/integrations/gitlab-ci">
+    GitLab CI/CD pipeline configuration
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+After setting up CI/CD integration:
+
+- Review the [GitHub Actions guide](/integrations/github-actions) for detailed workflow examples
+- Learn about [Docker integration](/integrations/docker) for containerized testing
+- Configure [scan modes and options](/cli/options) for your use case

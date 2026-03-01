@@ -1,0 +1,313 @@
+---
+title: 'Tools API'
+description: 'Register and execute tools for agents'
+icon: 'wrench'
+---
+
+## Overview
+
+The Tools API allows you to register custom tools that agents can use during execution. Tools can run locally or in the sandboxed environment.
+
+## Tool Registration
+
+### register_tool
+
+```python
+from strix.tools import register_tool
+
+@register_tool
+def my_tool(param1: str, param2: int) -> dict[str, Any]:
+    return {"result": "success"}
+```
+
+Decorator to register a function as a tool available to agents.
+
+<ParamField path="func" type="Callable" required>
+  The function to register as a tool
+</ParamField>
+
+<ParamField path="sandbox_execution" type="bool" default="True">
+  Whether the tool should execute inside the sandbox
+</ParamField>
+
+**Example:**
+```python
+from strix.tools import register_tool
+from typing import Any
+
+@register_tool
+def analyze_response(url: str, status_code: int) -> dict[str, Any]:
+    """Analyze an HTTP response."""
+    return {
+        "url": url,
+        "status": status_code,
+        "analysis": "Response looks normal"
+    }
+
+# Client-side only tool (doesn't run in sandbox)
+@register_tool(sandbox_execution=False)
+def send_notification(message: str) -> dict[str, Any]:
+    """Send a notification to the user."""
+    print(f"Notification: {message}")
+    return {"sent": True}
+```
+
+## Tool Execution
+
+### execute_tool
+
+```python
+from strix.tools import execute_tool
+
+result = await execute_tool(
+    tool_name: str,
+    agent_state: AgentState | None = None,
+    **kwargs: Any
+) -> Any
+```
+
+Executes a tool by name with the provided arguments.
+
+<ParamField path="tool_name" type="str" required>
+  Name of the tool to execute
+</ParamField>
+
+<ParamField path="agent_state" type="AgentState | None">
+  Agent state if the tool requires it
+</ParamField>
+
+<ParamField path="**kwargs" type="Any">
+  Tool-specific arguments
+</ParamField>
+
+<ResponseField name="return" type="Any">
+  Tool execution result
+</ResponseField>
+
+**Example:**
+```python
+from strix.tools import execute_tool
+
+result = await execute_tool(
+    "str_replace_editor",
+    agent_state=state,
+    command="view",
+    path="/workspace/test.py"
+)
+```
+
+### execute_tool_with_validation
+
+```python
+from strix.tools import execute_tool_with_validation
+
+result = await execute_tool_with_validation(
+    tool_name: str | None,
+    agent_state: AgentState | None = None,
+    **kwargs: Any
+) -> Any
+```
+
+Executes a tool with parameter validation.
+
+<ParamField path="tool_name" type="str | None" required>
+  Name of the tool to execute
+</ParamField>
+
+<ParamField path="agent_state" type="AgentState | None">
+  Agent state if required
+</ParamField>
+
+<ParamField path="**kwargs" type="Any">
+  Tool arguments
+</ParamField>
+
+<ResponseField name="return" type="Any">
+  Tool result or error message
+</ResponseField>
+
+**Example:**
+```python
+result = await execute_tool_with_validation(
+    "terminal_execute",
+    agent_state=state,
+    command="ls -la"
+)
+
+if isinstance(result, str) and result.startswith("Error:"):
+    print(f"Tool failed: {result}")
+```
+
+### process_tool_invocations
+
+```python
+from strix.tools import process_tool_invocations
+
+should_finish = await process_tool_invocations(
+    tool_invocations: list[dict[str, Any]],
+    conversation_history: list[dict[str, Any]],
+    agent_state: AgentState | None = None
+) -> bool
+```
+
+Processes multiple tool invocations from the LLM response.
+
+<ParamField path="tool_invocations" type="list[dict[str, Any]]" required>
+  List of tool invocation dictionaries
+</ParamField>
+
+<ParamField path="conversation_history" type="list[dict[str, Any]]" required>
+  Conversation history to append results to
+</ParamField>
+
+<ParamField path="agent_state" type="AgentState | None">
+  Agent state
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True if agent should finish execution
+</ResponseField>
+
+## Tool Registry
+
+### get_tool_by_name
+
+```python
+from strix.tools import get_tool_by_name
+
+tool_func = get_tool_by_name(name: str) -> Callable[..., Any] | None
+```
+
+Retrieves a tool function by name.
+
+<ParamField path="name" type="str" required>
+  Tool name
+</ParamField>
+
+<ResponseField name="return" type="Callable[..., Any] | None">
+  Tool function or None if not found
+</ResponseField>
+
+### get_tool_names
+
+```python
+from strix.tools import get_tool_names
+
+names = get_tool_names() -> list[str]
+```
+
+Returns a list of all registered tool names.
+
+<ResponseField name="return" type="list[str]">
+  List of tool names
+</ResponseField>
+
+### needs_agent_state
+
+```python
+from strix.tools import needs_agent_state
+
+requires_state = needs_agent_state(tool_name: str) -> bool
+```
+
+Checks if a tool requires agent_state parameter.
+
+<ParamField path="tool_name" type="str" required>
+  Name of the tool
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True if tool needs agent_state
+</ResponseField>
+
+## Built-in Tools
+
+Strix includes several built-in tools:
+
+### File Operations
+
+**str_replace_editor** - Edit files using view, create, str_replace, insert commands
+
+**list_files** - List files and directories
+
+**search_files** - Search file contents using regex
+
+### Terminal
+
+**terminal_execute** - Execute shell commands in the sandbox
+
+### Browser
+
+**browser_action** - Control a headless browser (launch, goto, click, type, etc.)
+
+### Python
+
+**python_execute** - Execute Python code in an isolated REPL
+
+### Agent Management
+
+**create_subagent** - Create a sub-agent for delegating tasks
+
+**send_message** - Send messages between agents
+
+**wait_for_message** - Wait for messages from other agents
+
+**agent_finish** - Mark sub-agent as completed
+
+### Completion
+
+**finish_scan** - Complete the scan and return results
+
+## Custom Tool Example
+
+```python
+from strix.tools import register_tool
+from strix.agents.state import AgentState
+from typing import Any
+import requests
+
+@register_tool
+def check_ssl_certificate(domain: str, agent_state: AgentState) -> dict[str, Any]:
+    """Check SSL certificate validity for a domain."""
+    try:
+        response = requests.get(f"https://{domain}", timeout=10)
+        cert_info = response.raw.connection.sock.getpeercert()
+        
+        return {
+            "domain": domain,
+            "valid": True,
+            "issuer": cert_info.get("issuer"),
+            "expires": cert_info.get("notAfter")
+        }
+    except Exception as e:
+        return {
+            "domain": domain,
+            "valid": False,
+            "error": str(e)
+        }
+
+# Use in agent
+from strix.tools import execute_tool
+
+result = await execute_tool(
+    "check_ssl_certificate",
+    agent_state=state,
+    domain="example.com"
+)
+```
+
+## Error Handling
+
+Tools should return error information in a consistent format:
+
+```python
+@register_tool
+def safe_tool(param: str) -> dict[str, Any]:
+    try:
+        # Tool logic
+        return {"result": "success"}
+    except Exception as e:
+        return {"error": str(e)}
+```
+
+The agent will receive error results and can handle them appropriately.

@@ -1,0 +1,431 @@
+---
+title: Security Policy
+description: Security vulnerability reporting and handling policy for Strix
+---
+
+Strix is a security testing tool, and we take the security of the tool itself very seriously. This policy outlines how to report security vulnerabilities and how we handle them.
+
+## Reporting a Vulnerability
+
+### What to Report
+
+Please report any security vulnerabilities in:
+
+- **Strix CLI** - The main command-line tool
+- **Docker sandbox** - Container isolation and security
+- **LLM integrations** - API key handling and data leakage
+- **Dependencies** - Vulnerable third-party packages
+- **Infrastructure** - Strix Platform (app.strix.ai) vulnerabilities
+
+### How to Report
+
+<Warning>
+  **Do not** report security vulnerabilities through public GitHub issues, discussions, or Discord. This could put users at risk.
+</Warning>
+
+To report a security vulnerability:
+
+1. **Email us privately**
+   - Send to: **security@usestrix.com**
+   - Subject: "Security Vulnerability Report"
+   - Include "CONFIDENTIAL" in subject line
+
+2. **Use GitHub Security Advisories**
+   - Go to: [github.com/usestrix/strix/security/advisories](https://github.com/usestrix/strix/security/advisories)
+   - Click "Report a vulnerability"
+   - Fill out the private disclosure form
+
+3. **For critical issues, encrypt your report**
+   - Use our PGP key (see below)
+   - Ensures sensitive details remain confidential
+
+### What to Include
+
+Please provide:
+
+1. **Description** - Clear explanation of the vulnerability
+2. **Impact** - What an attacker could do with this vulnerability
+3. **Affected versions** - Which versions are vulnerable
+4. **Steps to reproduce** - Detailed reproduction instructions
+5. **Proof of concept** - Code, commands, or screenshots demonstrating the issue
+6. **Suggested fix** - If you have ideas for remediation
+7. **Your contact information** - So we can follow up with questions
+
+### Example Report Template
+
+```markdown
+**Vulnerability Type:** [e.g., Command Injection, API Key Leakage]
+
+**Severity:** [Critical/High/Medium/Low]
+
+**Affected Component:** [e.g., strix/tools/terminal.py]
+
+**Affected Versions:** [e.g., 0.8.0 - 0.8.2]
+
+**Description:**
+[Clear explanation of the vulnerability]
+
+**Impact:**
+[What could an attacker do? What data is at risk?]
+
+**Steps to Reproduce:**
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
+
+**Proof of Concept:**
+```bash
+# Include reproduction code here
+```
+
+**Suggested Fix:**
+[If you have remediation ideas]
+
+**Additional Context:**
+[Any other relevant information]
+
+**Contact:**
+[Your name/email for follow-up]
+```
+
+## Our Commitment
+
+### Response Timeline
+
+We commit to:
+
+- **Initial response:** Within 24 hours
+- **Vulnerability assessment:** Within 3 business days
+- **Status update:** Every 7 days until resolved
+- **Fix release:** Based on severity (see below)
+
+### Severity-Based Response
+
+| Severity | Examples | Fix Timeline |
+|----------|----------|-------------|
+| **Critical** | Remote code execution, API key exposure | 1-3 days |
+| **High** | Authentication bypass, data leakage | 7-14 days |
+| **Medium** | Denial of service, information disclosure | 30 days |
+| **Low** | Minor information leaks, configuration issues | Next release |
+
+### Coordinated Disclosure
+
+We follow coordinated disclosure:
+
+1. **Day 0:** Report received
+2. **Day 1:** Acknowledge receipt
+3. **Day 3:** Validate and assess severity
+4. **Day 7:** Develop and test fix
+5. **Day 14-90:** Release patch (based on severity)
+6. **After release:** Public disclosure with credit
+
+We request you:
+- Don't publicly disclose until we release a fix
+- Give us reasonable time to patch (typically 90 days)
+- Work with us if you need disclosure sooner
+
+## Security Updates
+
+### How We Notify Users
+
+When we release security patches:
+
+1. **GitHub Security Advisories** - Official CVE assignments
+2. **Release notes** - Marked as security release
+3. **Discord announcements** - Notify community
+4. **Email notifications** - For Strix Platform users
+5. **Social media** - Twitter/X announcements
+
+### How to Stay Updated
+
+**Subscribe to security notifications:**
+
+1. **Watch Strix repository**
+   - Go to [github.com/usestrix/strix](https://github.com/usestrix/strix)
+   - Click "Watch" → "Custom" → Check "Security alerts"
+
+2. **Join Discord**
+   - [discord.gg/strix-ai](https://discord.gg/strix-ai)
+   - Follow #announcements channel
+
+3. **Follow on Twitter/X**
+   - [@strix_ai](https://x.com/strix_ai)
+   - Security updates posted immediately
+
+### Updating Strix
+
+Keep Strix updated to latest version:
+
+```bash
+# Check current version
+strix --version
+
+# Update via pip
+pip install --upgrade strix-agent
+
+# Update via pipx
+pipx upgrade strix-agent
+
+# Verify update
+strix --version
+
+# Pull latest Docker image
+docker pull usestrix/strix:latest
+```
+
+## Security Best Practices
+
+### For Users
+
+**Protect your LLM API keys:**
+
+```bash
+# Don't commit keys to git
+echo '.env' >> .gitignore
+echo 'cli-config.json' >> .gitignore
+
+# Use environment variables
+export LLM_API_KEY="your-key"
+
+# Don't share config files
+chmod 600 ~/.strix/cli-config.json
+```
+
+**Secure scan results:**
+
+```bash
+# Results may contain sensitive data
+chmod 700 strix_runs/
+
+# Encrypt before sharing
+tar -czf - strix_runs/latest/ | gpg -c > scan-results.tar.gz.gpg
+
+# Securely delete
+srm -r strix_runs/latest/  # or rm -P on macOS
+```
+
+**Use least privilege:**
+
+```bash
+# Don't run Strix as root
+id
+# uid=1000(user) - Good
+# uid=0(root) - Bad
+
+# Docker group is sufficient
+groups | grep docker
+```
+
+**Isolate testing:**
+
+```bash
+# Test in isolated environments
+# Use VMs, containers, or separate networks
+# Don't test production from your daily driver
+```
+
+### For Contributors
+
+**Secure development practices:**
+
+1. **No secrets in code**
+   - Use environment variables
+   - Never commit API keys or tokens
+   - Use `.gitignore` properly
+
+2. **Input validation**
+   - Sanitize all user input
+   - Validate file paths
+   - Escape shell commands properly
+
+3. **Dependency security**
+   ```bash
+   # Audit dependencies
+   poetry audit
+   pip-audit
+
+   # Keep dependencies updated
+   poetry update
+   ```
+
+4. **Code review**
+   - All PRs require review
+   - Security-sensitive changes need extra scrutiny
+   - Run security checks before merging
+
+5. **Run security checks**
+   ```bash
+   # Before submitting PRs
+   make security-check
+
+   # Or manually
+   bandit -r strix/
+   safety check
+   ```
+
+## Known Security Considerations
+
+### LLM API Data Sharing
+
+**What data is sent to LLM providers:**
+
+When you use cloud LLM providers (OpenAI, Anthropic, Google), Strix sends:
+
+- Target source code and configuration
+- HTTP requests and responses
+- Error messages and stack traces
+- Testing instructions and findings
+
+**Mitigation options:**
+
+```bash
+# Use local models for sensitive testing
+export STRIX_LLM="ollama/llama3.3:70b"
+
+# Or private cloud deployments
+export STRIX_LLM="azure/gpt-5-private"
+export LLM_API_BASE="https://private.openai.azure.com"
+
+# Or AWS Bedrock
+export STRIX_LLM="bedrock/anthropic.claude-v4"
+```
+
+### Docker Container Isolation
+
+**Security measures:**
+
+- Containers run with limited privileges
+- No access to host filesystem by default
+- Network isolation from host
+- Resource limits enforced
+
+**Considerations:**
+
+- Docker daemon has root privileges
+- Container escape vulnerabilities could affect host
+- Shared kernel with host system
+
+**Best practices:**
+
+```bash
+# Don't run Docker as root
+sudo usermod -aG docker $USER
+
+# Use rootless Docker for extra isolation (optional)
+export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock
+
+# Keep Docker updated
+docker version
+```
+
+### API Key Handling
+
+**How Strix stores keys:**
+
+- Environment variables (cleared on exit)
+- Config file: `~/.strix/cli-config.json` (file permissions 600)
+- Never in logs or reports
+- Never sent to Strix servers
+
+**Protect your keys:**
+
+```bash
+# Set restrictive permissions
+chmod 600 ~/.strix/cli-config.json
+
+# Rotate keys regularly
+# Revoke keys if compromised
+
+# Use separate keys for Strix
+# Don't reuse production API keys
+```
+
+## Security Features
+
+### Built-in Protections
+
+Strix includes several security features:
+
+1. **Sandboxed execution** - All testing runs in Docker containers
+2. **Input validation** - Sanitizes user inputs and file paths
+3. **Rate limiting** - Prevents runaway API usage
+4. **Timeout controls** - Prevents infinite loops
+5. **Error handling** - Fails safely without exposing internals
+
+### Security Defaults
+
+```python
+# Default security settings
+SECURE_DEFAULTS = {
+    "sandbox_enabled": True,
+    "verify_ssl": True,
+    "max_file_size": "100MB",
+    "timeout": 300,  # 5 minutes
+    "rate_limit": True,
+}
+```
+
+## Vulnerability Disclosure History
+
+We maintain transparency about security issues:
+
+### Published Advisories
+
+See [github.com/usestrix/strix/security/advisories](https://github.com/usestrix/strix/security/advisories) for:
+
+- CVE assignments
+- Detailed vulnerability descriptions
+- Affected versions
+- Patches and workarounds
+- Credit to reporters
+
+### Hall of Fame
+
+We recognize security researchers who responsibly disclose vulnerabilities:
+
+- [See our Security Researchers Hall of Fame](https://github.com/usestrix/strix/security/hall-of-fame)
+- Contributors receive public credit (unless they prefer anonymity)
+- Acknowledgment in release notes and security advisories
+
+## PGP Key
+
+For encrypted communication:
+
+```
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+[PGP key would be here]
+
+Fingerprint: [Key fingerprint]
+-----END PGP PUBLIC KEY BLOCK-----
+```
+
+Download from: [github.com/usestrix/strix/security/pgp-key.asc](https://github.com/usestrix/strix/security/pgp-key.asc)
+
+## Bug Bounty Program
+
+We currently don't have a formal bug bounty program. However:
+
+- We greatly appreciate security reports
+- Researchers receive public acknowledgment
+- Critical vulnerabilities may be eligible for rewards at our discretion
+
+Interested in a bug bounty program? Let us know: security@usestrix.com
+
+## Questions?
+
+For questions about this security policy:
+
+- **Security issues:** security@usestrix.com
+- **General questions:** hi@usestrix.com
+- **Discord:** [discord.gg/strix-ai](https://discord.gg/strix-ai)
+
+## Changes to This Policy
+
+This security policy may be updated periodically. We'll notify the community of significant changes through:
+
+- GitHub repository updates
+- Discord announcements
+- Documentation changes
+
+Last updated: March 2026

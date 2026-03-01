@@ -1,80 +1,225 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Get your first security scan running in minutes"
 ---
 
-## Get started in three steps
+## Prerequisites
 
-Get your documentation site running locally and make your first customization.
+Before you begin, ensure you have:
 
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+<Steps>
+  <Step title="Docker installed and running">
+    Strix uses Docker containers to create isolated security testing environments. 
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    Verify Docker is running:
+    ```bash
+    docker --version
+    ```
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    If not installed, download from [docker.com](https://www.docker.com/get-started)
+  </Step>
+  
+  <Step title="An LLM API key">
+    You need an API key from any [supported provider](/configuration/llm-providers):
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    - **OpenAI** (recommended: GPT-5)
+    - **Anthropic** (Claude Sonnet 4.6)
+    - **Google** (Gemini 3 Pro Preview)
+    - **Strix Router** — single API key for multiple providers with $10 free credit at [models.strix.ai](https://models.strix.ai)
+    
+    Or use local models with Ollama or LMStudio
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Installation and first scan
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Get Strix running in three commands:
 
-### Step 3: Go live
+<Steps>
+  <Step title="Install Strix">
+    Use the official install script:
+    
+    ```bash
+    curl -sSL https://strix.ai/install | bash
+    ```
+    
+    This installs the `strix` command globally. Verify installation:
+    
+    ```bash
+    strix --version
+    ```
+    
+    <Tip>
+      You can also install via pip: `pip install strix-agent`
+    </Tip>
+  </Step>
+  
+  <Step title="Configure your AI provider">
+    Set your LLM model and API key:
+    
+    <CodeGroup>
+    ```bash OpenAI
+    export STRIX_LLM="openai/gpt-5"
+    export LLM_API_KEY="your-openai-api-key"
+    ```
+    
+    ```bash Anthropic
+    export STRIX_LLM="anthropic/claude-sonnet-4-6"
+    export LLM_API_KEY="your-anthropic-api-key"
+    ```
+    
+    ```bash Strix Router
+    export STRIX_LLM="strix/gpt-5"
+    export LLM_API_KEY="your-strix-router-key"
+    ```
+    
+    ```bash Google Gemini
+    export STRIX_LLM="vertex_ai/gemini-3-pro-preview"
+    # Vertex AI uses application default credentials
+    ```
+    </CodeGroup>
+    
+    <Note>
+      Strix automatically saves your configuration to `~/.strix/cli-config.json`, so you don't need to re-enter it on every run.
+    </Note>
+  </Step>
+  
+  <Step title="Run your first scan">
+    Start a security assessment of your application:
+    
+    <CodeGroup>
+    ```bash Local code
+    strix --target ./app-directory
+    ```
+    
+    ```bash GitHub repository
+    strix --target https://github.com/org/repo
+    ```
+    
+    ```bash Web application
+    strix --target https://your-app.com
+    ```
+    
+    ```bash Domain
+    strix --target example.com
+    ```
+    </CodeGroup>
+    
+    The first run automatically pulls the Docker sandbox image, which may take a few minutes.
+  </Step>
+</Steps>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+## What happens during a scan
+
+When you run Strix, here's what happens:
+
+1. **Environment setup** - Strix validates your configuration and pulls the Docker image if needed
+2. **LLM warm-up** - Tests connection to your LLM provider
+3. **Target analysis** - Determines target type (code, web app, repository)
+4. **Agent orchestration** - Launches specialized security testing agents
+5. **Vulnerability discovery** - Agents explore, test, and validate findings
+6. **Proof-of-concept creation** - Generates PoCs for discovered vulnerabilities
+7. **Report generation** - Creates detailed reports with reproduction steps
+
+Results are saved to `strix_runs/<run-name>` with:
+- JSON vulnerability reports
+- Proof-of-concept code
+- HTTP request/response logs
+- Agent execution traces
+
+## Understanding the output
+
+### Interactive mode (default)
+
+By default, Strix runs in interactive mode with a text-based UI:
+
+- **Live agent activity** - Watch agents work in real-time
+- **Vulnerability feed** - See findings as they're discovered
+- **Logs and traces** - Detailed execution information
+- **Progress tracking** - Visual status of scan progress
+
+Press `Ctrl+C` to exit gracefully.
+
+### Non-interactive mode
+
+For CI/CD and automation, use the `-n` flag:
+
+```bash
+strix -n --target https://your-app.com
+```
+
+This mode:
+- Prints vulnerability findings to stdout
+- Exits automatically when complete
+- Returns exit code `2` if vulnerabilities found
+- Returns exit code `0` if no vulnerabilities
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
+Now that you've run your first scan, explore these topics:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Installation methods" icon="download" href="/installation">
+    Learn about pip install, Docker options, and Python requirements
+  </Card>
+  
+  <Card title="Basic usage" icon="terminal" href="/usage/basic-usage">
+    Understand target types and common testing patterns
+  </Card>
+  
+  <Card title="Scan modes" icon="gauge" href="/usage/scan-modes">
+    Configure quick, standard, or deep scan modes
+  </Card>
+  
+  <Card title="Custom instructions" icon="message-lines" href="/usage/custom-instructions">
+    Guide agents to focus on specific vulnerabilities or areas
+  </Card>
+  
+  <Card title="LLM providers" icon="brain" href="/configuration/llm-providers">
+    Configure OpenAI, Anthropic, Google, or local models
+  </Card>
+  
+  <Card title="CI/CD integration" icon="code-branch" href="/integrations/ci-cd">
+    Add Strix to your deployment pipeline
+  </Card>
 </CardGroup>
 
+## Common issues
+
+<AccordionGroup>
+  <Accordion title="Docker not running" icon="docker">
+    If you see "Docker connection failed", ensure Docker Desktop is running:
+    
+    ```bash
+    docker ps
+    ```
+    
+    If this fails, start Docker Desktop and try again.
+  </Accordion>
+  
+  <Accordion title="LLM connection failed" icon="plug">
+    Verify your API key is correct and has sufficient credits:
+    
+    ```bash
+    echo $LLM_API_KEY
+    echo $STRIX_LLM
+    ```
+    
+    Test your provider's API directly or check their status page.
+  </Accordion>
+  
+  <Accordion title="Image pull takes too long" icon="download">
+    The Docker image is ~2GB and only downloads on first run. Subsequent runs are instant.
+    
+    If the download is interrupted, remove the partial image and retry:
+    
+    ```bash
+    docker rmi ghcr.io/usestrix/sandbox:latest
+    strix --target ./app
+    ```
+  </Accordion>
+</AccordionGroup>
+
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Need more help? Join our [Discord community](https://discord.gg/strix-ai) or check [troubleshooting](/resources/troubleshooting).
 </Note>

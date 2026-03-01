@@ -1,0 +1,677 @@
+---
+title: Advanced Testing
+description: Master complex testing scenarios including authenticated testing, grey-box assessments, and advanced configurations
+---
+
+Advanced testing techniques allow you to perform sophisticated security assessments that go beyond basic vulnerability scanning. Learn how to conduct authenticated testing, grey-box assessments, and leverage Strix's full capabilities.
+
+## Authenticated Testing
+
+Authenticated testing allows Strix to assess protected areas of your application by providing credentials.
+
+### Providing Test Credentials
+
+Pass credentials through custom instructions:
+
+<CodeGroup>
+```bash Inline credentials
+strix --target https://app.example.com \
+  --instruction "Use credentials user@test.com:password123 for authenticated testing"
+```
+
+```bash Multiple accounts
+strix --target https://app.example.com \
+  --instruction-file ./credentials.txt
+```
+</CodeGroup>
+
+**credentials.txt:**
+```text
+Authenticated Security Testing
+
+Test Accounts:
+1. Regular User
+   Email: user@test.com
+   Password: UserPass123!
+   User ID: 1001
+
+2. Premium User
+   Email: premium@test.com
+   Password: PremiumPass456!
+   User ID: 2001
+
+3. Administrator
+   Email: admin@test.com
+   Password: AdminSecure789!
+   User ID: 1
+
+Focus on:
+- Horizontal privilege escalation (user to user)
+- Vertical privilege escalation (user to admin)
+- Session management vulnerabilities
+```
+
+### What Strix Tests with Credentials
+
+When provided with credentials, Strix automatically:
+
+<AccordionGroup>
+  <Accordion title="Authentication Mechanisms">
+    - Login flow security
+    - Session management
+    - Token handling (JWT, cookies, etc.)
+    - Multi-factor authentication bypass
+    - Password reset vulnerabilities
+  </Accordion>
+
+  <Accordion title="Authorization & Access Control">
+    - Horizontal privilege escalation (IDOR)
+    - Vertical privilege escalation
+    - Role-based access control (RBAC) bypass
+    - Direct object reference vulnerabilities
+    - Function-level access control
+  </Accordion>
+
+  <Accordion title="Protected Features">
+    - User profile management
+    - Admin panels and dashboards
+    - API endpoints requiring authentication
+    - Payment and transaction flows
+    - File upload and download features
+  </Accordion>
+
+  <Accordion title="Session Security">
+    - Session fixation
+    - Session hijacking
+    - Concurrent session handling
+    - Session timeout validation
+    - Logout functionality
+  </Accordion>
+</AccordionGroup>
+
+### Example: E-commerce Authenticated Testing
+
+```bash
+strix --target https://shop.example.com --instruction-file ./ecommerce-auth.txt --scan-mode deep
+```
+
+**ecommerce-auth.txt:**
+```text
+E-commerce Authenticated Security Assessment
+
+## Test Accounts
+
+### Customer Account
+Email: customer@test.com
+Password: CustomerPass123!
+Account ID: C-12345
+
+### Vendor Account
+Email: vendor@test.com
+Password: VendorPass456!
+Account ID: V-67890
+
+### Admin Account
+Email: admin@test.com
+Password: AdminSecure789!
+Account ID: A-00001
+
+## Testing Objectives
+
+1. Customer Features
+   - Shopping cart manipulation
+   - Order history access control
+   - Payment method security
+   - Wishlist IDOR vulnerabilities
+
+2. Vendor Features
+   - Product management authorization
+   - Sales data access control
+   - Payout manipulation
+   - Cross-vendor data access
+
+3. Admin Features
+   - User management privilege escalation
+   - System configuration access
+   - Report generation security
+   - Bulk operations authorization
+
+4. Cross-Role Testing
+   - Customer → Vendor escalation
+   - Vendor → Admin escalation
+   - Session reuse across roles
+```
+
+**Terminal output:**
+```
+[STRIX]
+Target: https://shop.example.com
+Scan mode: deep
+
+[10:15:22] Starting authenticated security assessment...
+[10:15:45] Logging in as customer@test.com...
+[10:16:12] Authenticated successfully - testing customer features
+[10:23:55] Found IDOR in order history (/api/orders/{id})
+[10:28:33] Testing privilege escalation...
+[10:35:47] Logging in as vendor@test.com...
+[10:42:18] Discovered vendor → admin escalation path
+[10:55:29] Testing session management...
+[11:08:44] Confirmed session fixation vulnerability
+
+Scan completed in 53m 22s
+Vulnerabilities found: 12 (4 critical, 6 high, 2 medium)
+```
+
+## Grey-Box Testing
+
+Grey-box testing combines source code analysis with runtime testing, providing the most comprehensive security assessment.
+
+### Source Code + Deployed Application
+
+Test both code and runtime together:
+
+```bash
+strix --target https://github.com/org/webapp \
+  --target https://app.example.com \
+  --instruction-file ./greybox-test.txt \
+  --scan-mode deep
+```
+
+**greybox-test.txt:**
+```text
+Grey-Box Security Assessment
+
+## Targets
+1. https://github.com/org/webapp - Source code
+2. https://app.example.com - Deployed application
+
+## Test Strategy
+
+### Source Code Analysis
+- Identify vulnerable code patterns
+- Trace data flow for injection points
+- Review authentication implementation
+- Analyze security configurations
+
+### Runtime Validation
+- Validate code-level findings in deployment
+- Test exploitability of identified issues
+- Check for configuration vulnerabilities
+- Verify security controls are active
+
+### Cross-Reference
+Compare source code implementation with runtime behavior:
+- Does code-level validation work in production?
+- Are security configurations properly deployed?
+- Do code vulnerabilities manifest in runtime?
+
+## Credentials
+User: greybox-test@example.com
+Password: GreyBoxTest123!
+```
+
+### Benefits of Grey-Box Testing
+
+<Steps>
+  <Step title="Higher accuracy">
+    Source code analysis reduces false positives:
+    
+    - Confirm vulnerabilities exist in code
+    - Validate exploitability in runtime
+    - Reduce false positive rate
+  </Step>
+
+  <Step title="Deeper insights">
+    Understand root causes:
+    
+    - Identify vulnerable code patterns
+    - Trace attack vectors through codebase
+    - Provide actionable remediation guidance
+  </Step>
+
+  <Step title="Configuration issues">
+    Find deployment-specific problems:
+    
+    - Security controls disabled in production
+    - Environment variable misconfigurations
+    - Debug mode enabled in deployment
+  </Step>
+
+  <Step title="Complete coverage">
+    Test what scanners miss:
+    
+    - Business logic vulnerabilities
+    - Complex authentication flows
+    - Multi-step attack chains
+  </Step>
+</Steps>
+
+### Example: API Grey-Box Assessment
+
+```bash
+strix -t https://github.com/org/api \
+  -t https://api.example.com \
+  --instruction-file ./api-greybox.md \
+  --scan-mode deep
+```
+
+**api-greybox.md:**
+```markdown
+# API Grey-Box Security Assessment
+
+## Targets
+- **Source:** https://github.com/org/api
+- **Deployment:** https://api.example.com
+
+## API Authentication
+API Key: `sk_test_1234567890abcdef`
+Bearer Token: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+
+## Testing Approach
+
+### Phase 1: Source Code Analysis
+1. Review route definitions and handlers
+2. Analyze authentication middleware
+3. Identify data validation logic
+4. Check for hardcoded secrets
+
+### Phase 2: Runtime Testing
+1. Validate authentication mechanisms
+2. Test identified injection points
+3. Verify authorization enforcement
+4. Check rate limiting
+
+### Phase 3: Cross-Reference
+1. Compare code vs runtime behavior
+2. Validate security controls are active
+3. Check for deployment misconfigurations
+
+## Critical Endpoints
+
+### User Management
+- `POST /api/v2/users` - User creation
+- `GET /api/v2/users/{id}` - User retrieval
+- `PUT /api/v2/users/{id}` - User update
+- `DELETE /api/v2/users/{id}` - User deletion
+
+### Authentication
+- `POST /api/v2/auth/login` - User login
+- `POST /api/v2/auth/refresh` - Token refresh
+- `POST /api/v2/auth/reset` - Password reset
+
+### Admin Functions
+- `GET /api/v2/admin/users` - List all users
+- `POST /api/v2/admin/users/{id}/ban` - Ban user
+- `GET /api/v2/admin/audit-logs` - Audit logs
+```
+
+## Testing with Custom Configurations
+
+### Using Custom Config Files
+
+Override default Strix configuration:
+
+```bash
+strix --target https://app.example.com --config ./custom-config.json
+```
+
+**custom-config.json:**
+```json
+{
+  "strix_llm": "openai/gpt-5",
+  "llm_timeout": 600,
+  "strix_reasoning_effort": "xhigh",
+  "max_parallel_agents": 10
+}
+```
+
+<Note>
+When using `--config`, Strix uses your custom configuration instead of `~/.strix/cli-config.json`.
+</Note>
+
+### Environment-Specific Testing
+
+Create configuration for different environments:
+
+<CodeGroup>
+```json development.json
+{
+  "strix_llm": "openai/gpt-5",
+  "strix_reasoning_effort": "medium",
+  "scan_timeout": 1800
+}
+```
+
+```json production.json
+{
+  "strix_llm": "anthropic/claude-sonnet-4-6",
+  "strix_reasoning_effort": "high",
+  "scan_timeout": 7200
+}
+```
+</CodeGroup>
+
+```bash
+# Development testing (faster)
+strix -t ./app --config development.json --scan-mode quick
+
+# Production testing (thorough)
+strix -t https://prod.example.com --config production.json --scan-mode deep
+```
+
+## Advanced Multi-Target Scenarios
+
+### Microservices with Service Mesh
+
+Test interconnected services:
+
+```bash
+strix -t https://api-gateway.example.com \
+  -t https://auth-service.example.com \
+  -t https://user-service.example.com \
+  -t https://payment-service.example.com \
+  -t https://admin-service.example.com \
+  --instruction-file ./microservices-test.txt \
+  --scan-mode deep
+```
+
+**microservices-test.txt:**
+```text
+Microservices Security Assessment
+
+## Architecture
+- API Gateway: https://api-gateway.example.com
+- Auth Service: https://auth-service.example.com
+- User Service: https://user-service.example.com
+- Payment Service: https://payment-service.example.com
+- Admin Service: https://admin-service.example.com
+
+## Service Credentials
+
+### API Gateway
+API Key: gw_key_1234567890
+
+### Auth Service
+Service Token: auth_svc_abcdef1234
+
+### User Service
+Service Token: user_svc_123456abcd
+
+### Payment Service
+Service Token: pay_svc_abcd123456
+
+### Admin Service
+Service Token: admin_svc_fedcba9876
+
+## Testing Focus
+
+1. Service-to-Service Authentication
+   - JWT validation between services
+   - Service token security
+   - mTLS certificate validation
+
+2. Cross-Service Authorization
+   - Privilege escalation across services
+   - Service boundary enforcement
+   - API gateway bypass
+
+3. Inter-Service Communication
+   - Internal API exposure
+   - Service mesh security
+   - Network segmentation
+
+4. Chain Exploits
+   - Multi-service attack paths
+   - Gateway → Auth → Admin escalation
+   - Payment service isolation bypass
+```
+
+### Full-Stack with Infrastructure
+
+Comprehensive assessment including infrastructure:
+
+```bash
+strix -t https://github.com/org/frontend \
+  -t https://github.com/org/backend \
+  -t https://app.example.com \
+  -t https://api.example.com \
+  -t example.com \
+  --instruction "Test full stack including DNS, TLS, and infrastructure" \
+  --scan-mode deep
+```
+
+## CI/CD Advanced Integration
+
+### Automated Grey-Box Testing
+
+```yaml
+name: Grey-Box Security Scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly Monday 2 AM
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Install Strix
+        run: curl -sSL https://strix.ai/install | bash
+      
+      - name: Build and Deploy to Test Environment
+        run: |
+          docker-compose up -d
+          ./wait-for-ready.sh
+      
+      - name: Grey-Box Security Scan
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          strix -n \
+            -t ./ \
+            -t http://localhost:3000 \
+            --instruction-file .github/security-test.txt \
+            --scan-mode standard
+      
+      - name: Upload Security Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: strix-security-report
+          path: strix_runs/
+      
+      - name: Comment PR with Findings
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('strix_runs/*/report.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## Strix Security Scan Results\n\n' + report
+            });
+      
+      - name: Fail on Critical Findings
+        run: |
+          if strix -n -t ./ -t http://localhost:3000 --scan-mode quick; then
+            echo "No critical vulnerabilities found"
+          else
+            echo "Critical vulnerabilities detected!"
+            exit 1
+          fi
+```
+
+### Environment-Based Testing
+
+```yaml
+name: Multi-Environment Security
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to test'
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Install Strix
+        run: curl -sSL https://strix.ai/install | bash
+      
+      - name: Set Environment Variables
+        run: |
+          case ${{ github.event.inputs.environment }} in
+            development)
+              echo "TARGET_URL=https://dev.example.com" >> $GITHUB_ENV
+              echo "SCAN_MODE=quick" >> $GITHUB_ENV
+              ;;
+            staging)
+              echo "TARGET_URL=https://staging.example.com" >> $GITHUB_ENV
+              echo "SCAN_MODE=standard" >> $GITHUB_ENV
+              ;;
+            production)
+              echo "TARGET_URL=https://prod.example.com" >> $GITHUB_ENV
+              echo "SCAN_MODE=deep" >> $GITHUB_ENV
+              ;;
+          esac
+      
+      - name: Run Security Scan
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          strix -n \
+            -t $TARGET_URL \
+            --scan-mode $SCAN_MODE \
+            --instruction-file .github/${{ github.event.inputs.environment }}-test.txt
+```
+
+## Best Practices for Advanced Testing
+
+<Steps>
+  <Step title="Separate credentials by role">
+    Provide multiple accounts with different privilege levels:
+    
+    ```text
+    Test Accounts:
+    - user@test.com (regular user)
+    - moderator@test.com (moderator)
+    - admin@test.com (administrator)
+    ```
+  </Step>
+
+  <Step title="Use dedicated test environments">
+    Never test production with destructive payloads:
+    
+    ```bash
+    # Good - testing staging
+    strix -t https://staging.example.com --scan-mode deep
+    
+    # Risky - testing production (use carefully)
+    strix -t https://prod.example.com --scan-mode quick
+    ```
+  </Step>
+
+  <Step title="Document testing scope">
+    Clearly define what should and shouldn't be tested:
+    
+    ```text
+    In Scope:
+    - /api/v2/* endpoints
+    - User authentication
+    - Payment processing
+    
+    Out of Scope:
+    - Third-party integrations
+    - Marketing pages
+    ```
+  </Step>
+
+  <Step title="Combine testing techniques">
+    Use grey-box + authenticated + multi-target for best results:
+    
+    ```bash
+    strix -t https://github.com/org/app \
+      -t https://staging.example.com \
+      -t https://prod.example.com \
+      --instruction-file ./comprehensive-test.txt \
+      --scan-mode deep
+    ```
+  </Step>
+</Steps>
+
+## Troubleshooting Advanced Scenarios
+
+### Authentication Failures
+
+**Problem:** Strix can't log in with provided credentials
+
+```
+[ERROR] Authentication failed for user@test.com
+```
+
+**Solutions:**
+1. Verify credentials are correct
+2. Check for CAPTCHA or anti-automation
+3. Ensure MFA is disabled for test account
+4. Provide more detailed login instructions
+
+### Multi-Target Correlation Issues
+
+**Problem:** Findings not correlated across targets
+
+**Solutions:**
+1. Use custom instructions to guide correlation:
+   ```text
+   Compare findings between source code and deployment.
+   Identify vulnerabilities present in both.
+   ```
+
+2. Ensure targets are related (same application)
+
+3. Use descriptive target organization
+
+### Configuration Override Not Working
+
+**Problem:** Custom config not applied
+
+```bash
+strix --target app.com --config ./custom.json
+# Still using default config
+```
+
+**Solutions:**
+1. Verify JSON is valid: `cat custom.json | jq`
+2. Check file path is correct
+3. Ensure file is readable: `ls -la custom.json`
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="CI/CD Integration" icon="code-branch" href="/integrations/github-actions">
+    Integrate advanced testing into your pipeline
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/environment-variables">
+    Learn about all configuration options
+  </Card>
+</CardGroup>

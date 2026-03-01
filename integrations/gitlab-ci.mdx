@@ -1,0 +1,474 @@
+---
+title: GitLab CI/CD
+description: Integrate Strix security testing into your GitLab CI/CD pipelines for automated vulnerability detection
+---
+
+You can integrate Strix into GitLab CI/CD pipelines to automatically run security tests on merge requests, commits, or scheduled intervals. This provides continuous security testing within your GitLab workflow.
+
+## Quick Start Pipeline
+
+Here's a minimal `.gitlab-ci.yml` configuration that runs Strix on every merge request:
+
+```yaml
+stages:
+  - security
+
+strix-scan:
+  stage: security
+  image: docker:latest
+  services:
+    - docker:dind
+  
+  before_script:
+    - apk add --no-cache curl bash
+    - curl -sSL https://strix.ai/install | bash
+  
+  script:
+    - strix -n -t ./ --scan-mode quick
+  
+  variables:
+    STRIX_LLM: $STRIX_LLM
+    LLM_API_KEY: $LLM_API_KEY
+  
+  only:
+    - merge_requests
+```
+
+<Note>
+This pipeline uses Docker-in-Docker (dind) service to run the Strix sandbox container. Ensure Docker is enabled in your GitLab Runner configuration.
+</Note>
+
+## Prerequisites
+
+<Steps>
+  <Step title="Enable Docker support">
+    Ensure your GitLab Runner has Docker-in-Docker (dind) or Docker socket access enabled.
+  </Step>
+  
+  <Step title="Configure CI/CD variables">
+    Add these variables in **Settings → CI/CD → Variables**:
+    
+    - `STRIX_LLM` - Your LLM provider and model (e.g., `openai/gpt-5`)
+    - `LLM_API_KEY` - Your LLM API key (mark as masked)
+    
+    Optionally add:
+    - `LLM_API_BASE` - Custom API endpoint
+    - `PERPLEXITY_API_KEY` - For enhanced search capabilities
+  </Step>
+  
+  <Step title="Get API credentials">
+    Obtain an API key from your chosen provider:
+    
+    - [OpenAI](https://openai.com/api/) for GPT models
+    - [Anthropic](https://claude.com/platform/api) for Claude models
+    - [Strix Router](https://models.strix.ai) for multi-provider access
+  </Step>
+</Steps>
+
+## Complete Pipeline Examples
+
+### Merge Request Scanning
+
+Scan code changes on every merge request with artifact storage:
+
+```yaml
+stages:
+  - security
+
+strix-mr-scan:
+  stage: security
+  image: docker:latest
+  services:
+    - docker:dind
+  
+  before_script:
+    - apk add --no-cache curl bash
+    - curl -sSL https://strix.ai/install | bash
+  
+  script:
+    - strix -n --target ./ --scan-mode quick
+  
+  variables:
+    STRIX_LLM: $STRIX_LLM
+    LLM_API_KEY: $LLM_API_KEY
+    STRIX_REASONING_EFFORT: "medium"
+    DOCKER_TLS_CERTDIR: "/certs"
+  
+  artifacts:
+    when: always
+    paths:
+      - strix_runs/
+    expire_in: 30 days
+  
+  only:
+    - merge_requests
+```
+
+### Scheduled Comprehensive Scans
+
+Run deeper security assessments on a schedule:
+
+```yaml
+stages:
+  - security
+
+strix-weekly-audit:
+  stage: security
+  image: docker:latest
+  services:
+    - docker:dind
+  
+  timeout: 2h
+  
+  before_script:
+    - apk add --no-cache curl bash
+    - curl -sSL https://strix.ai/install | bash
+  
+  script:
+    - strix -n --target ./
+  
+  variables:
+    STRIX_LLM: $STRIX_LLM
+    LLM_API_KEY: $LLM_API_KEY
+    PERPLEXITY_API_KEY: $PERPLEXITY_API_KEY
+    DOCKER_TLS_CERTDIR: "/certs"
+  
+  artifacts:
+    when: always
+    paths:
+      - strix_runs/
+    expire_in: 90 days
+  
+  only:
+    - schedules
+```
+
+### Multi-Stage Pipeline
+
+Integrate Strix into a multi-stage deployment pipeline:
+
+```yaml
+stages:
+  - build
+  - test
+  - security
+  - deploy
+
+build:
+  stage: build
+  script:
+    - echo "Building application..."
+  # Your build steps
+
+test:
+  stage: test
+  script:
+    - echo "Running tests..."
+  # Your test steps
+
+strix-security:
+  stage: security
+  image: docker:latest
+  services:
+    - docker:dind
+  
+  before_script:
+    - apk add --no-cache curl bash
+    - curl -sSL https://strix.ai/install | bash
+  
+  script:
+    - strix -n --target ./ --scan-mode quick
+  
+  variables:
+    STRIX_LLM: $STRIX_LLM
+    LLM_API_KEY: $LLM_API_KEY
+    DOCKER_TLS_CERTDIR: "/certs"
+  
+  artifacts:
+    when: always
+    paths:
+      - strix_runs/
+  
+  allow_failure: false  # Block deployment if vulnerabilities found
+  
+  only:
+    - main
+    - develop
+
+deploy:
+  stage: deploy
+  script:
+    - echo "Deploying application..."
+  # Your deployment steps
+  only:
+    - main
+```
+
+### Multi-Target Testing
+
+Test both source code and deployed staging environment:
+
+```yaml
+stages:
+  - security
+
+strix-multi-target:
+  stage: security
+  image: docker:latest
+  services:
+    - docker:dind
+  
+  before_script:
+    - apk add --no-cache curl bash
+    - curl -sSL https://strix.ai/install | bash
+  
+  script:
+    - |
+      strix -n \
+        -t ./ \
+        -t https://staging.your-app.com \
+        --scan-mode quick
+  
+  variables:
+    STRIX_LLM: $STRIX_LLM
+    LLM_API_KEY: $LLM_API_KEY
+    DOCKER_TLS_CERTDIR: "/certs"
+  
+  only:
+    - staging
+```
+
+### Authenticated Testing
+
+Perform grey-box testing with credentials:
+
+```yaml
+stages:
+  - security
+
+strix-authenticated:
+  stage: security
+  image: docker:latest
+  services:
+    - docker:dind
+  
+  before_script:
+    - apk add --no-cache curl bash
+    - curl -sSL https://strix.ai/install | bash
+  
+  script:
+    - |
+      strix -n \
+        --target https://staging.your-app.com \
+        --instruction "Perform authenticated testing using credentials: $TEST_USERNAME:$TEST_PASSWORD"
+  
+  variables:
+    STRIX_LLM: $STRIX_LLM
+    LLM_API_KEY: $LLM_API_KEY
+    TEST_USERNAME: $TEST_USERNAME
+    TEST_PASSWORD: $TEST_PASSWORD
+    DOCKER_TLS_CERTDIR: "/certs"
+  
+  when: manual
+  only:
+    - staging
+```
+
+## Runner Configuration
+
+### Docker-in-Docker (dind)
+
+The recommended approach uses Docker-in-Docker:
+
+```yaml
+image: docker:latest
+services:
+  - docker:dind
+
+variables:
+  DOCKER_TLS_CERTDIR: "/certs"
+  DOCKER_DRIVER: overlay2
+```
+
+### Docker Socket Binding
+
+Alternatively, bind the Docker socket (requires privileged runner):
+
+```yaml
+variables:
+  DOCKER_HOST: unix:///var/run/docker.sock
+
+before_script:
+  - apk add --no-cache docker-cli
+```
+
+<Warning>
+Binding the Docker socket requires a privileged runner and may have security implications. Use Docker-in-Docker when possible.
+</Warning>
+
+## Pipeline Configuration Options
+
+### Timeout Settings
+
+Set appropriate timeouts based on your scan depth:
+
+```yaml
+strix-scan:
+  timeout: 1h  # Options: 30m, 1h, 2h
+```
+
+- **Quick scans**: 30 minutes
+- **Standard scans**: 1 hour
+- **Comprehensive scans**: 2 hours
+
+### Environment Variables
+
+<CodeGroup>
+```yaml Basic Configuration
+variables:
+  STRIX_LLM: $STRIX_LLM
+  LLM_API_KEY: $LLM_API_KEY
+  DOCKER_TLS_CERTDIR: "/certs"
+```
+
+```yaml Full Configuration
+variables:
+  STRIX_LLM: $STRIX_LLM
+  LLM_API_KEY: $LLM_API_KEY
+  LLM_API_BASE: $LLM_API_BASE
+  PERPLEXITY_API_KEY: $PERPLEXITY_API_KEY
+  STRIX_REASONING_EFFORT: "medium"
+  DOCKER_TLS_CERTDIR: "/certs"
+  DOCKER_DRIVER: overlay2
+```
+</CodeGroup>
+
+## Handling Results
+
+### Artifacts Configuration
+
+Save scan results as pipeline artifacts:
+
+```yaml
+artifacts:
+  when: always  # Save even if job fails
+  paths:
+    - strix_runs/
+  expire_in: 30 days
+  reports:
+    dotenv: strix_runs/.env  # Optional: export variables
+```
+
+### Conditional Failure
+
+Control whether vulnerabilities block the pipeline:
+
+```yaml
+strix-scan:
+  # ... other configuration ...
+  
+  allow_failure: false  # Block pipeline on vulnerabilities
+  # or
+  allow_failure: true   # Continue pipeline, but mark as warning
+```
+
+## Optimization Tips
+
+<Steps>
+  <Step title="Use quick scan mode for MRs">
+    Enable `--scan-mode quick` for faster merge request feedback:
+    ```yaml
+    script:
+      - strix -n --target ./ --scan-mode quick
+    ```
+  </Step>
+  
+  <Step title="Adjust reasoning effort">
+    Set `STRIX_REASONING_EFFORT="medium"` for faster CI/CD runs:
+    ```yaml
+    variables:
+      STRIX_REASONING_EFFORT: "medium"
+    ```
+  </Step>
+  
+  <Step title="Cache Docker images">
+    Enable Docker layer caching to speed up image pulls:
+    ```yaml
+    variables:
+      DOCKER_DRIVER: overlay2
+    ```
+  </Step>
+  
+  <Step title="Separate quick and deep scans">
+    Use quick scans for merge requests and scheduled jobs for comprehensive testing:
+    ```yaml
+    only:
+      - merge_requests  # Quick scan
+      - schedules       # Comprehensive scan
+    ```
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Docker Permission Issues
+
+If you encounter Docker permission errors:
+
+```yaml
+variables:
+  DOCKER_TLS_CERTDIR: "/certs"
+  FF_NETWORK_PER_BUILD: 1
+```
+
+### Runner Compatibility
+
+Ensure your GitLab Runner supports Docker:
+
+```toml
+# /etc/gitlab-runner/config.toml
+[[runners]]
+  executor = "docker"
+  [runners.docker]
+    privileged = true
+    volumes = ["/certs/client", "/cache"]
+```
+
+### Memory Limits
+
+For large scans, increase memory limits:
+
+```yaml
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_MEMORY: "4g"
+```
+
+### Installation Failures
+
+If the installation script fails:
+
+```yaml
+before_script:
+  - apk add --no-cache curl bash ca-certificates
+  - curl -sSL https://strix.ai/install | bash
+  - export PATH="$HOME/.strix/bin:$PATH"
+```
+
+## Security Best Practices
+
+<Warning>
+Always mark sensitive variables as "Masked" and "Protected" in GitLab CI/CD settings to prevent exposure in logs.
+</Warning>
+
+- **Protect variables** - Mark API keys as masked and protected
+- **Limit scope** - Only scan authorized targets
+- **Use protected branches** - Run comprehensive scans only on protected branches
+- **Review findings** - Set up notifications for security findings
+- **Rotate credentials** - Regularly rotate API keys
+
+## Next Steps
+
+- Review [GitHub Actions integration](/integrations/github-actions) for comparison
+- Learn about [Docker configuration](/integrations/docker) for custom sandbox setups
+- Explore [CLI options](/cli/options) for advanced configuration

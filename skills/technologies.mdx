@@ -1,0 +1,182 @@
+---
+title: Technology Skills
+description: Specialized skills for testing third-party services and technology platforms
+---
+
+Technology skills provide Strix agents with deep knowledge of specific third-party services, platforms, and technologies. These skills understand service-specific security models, common misconfigurations, and exploitation patterns unique to each platform.
+
+## Available Technology Skills
+
+<CardGroup cols={2}>
+  <Card title="Supabase" icon="database">
+    Row Level Security, PostgREST, Edge Functions, and service key exposure testing for Supabase applications.
+  </Card>
+  <Card title="Firebase / Firestore" icon="fire">
+    Security rules, Cloud Functions, and client-side trust issue testing for Firebase applications.
+  </Card>
+</CardGroup>
+
+## Supabase Skill
+
+The Supabase skill provides comprehensive testing knowledge for applications built on Supabase.
+
+### Attack Surface Coverage
+
+**Data Access**
+- PostgREST: table CRUD, filters, embeddings, RPC (remote functions)
+- GraphQL: pg_graphql over Postgres schema with RLS interaction
+- Realtime: replication subscriptions, broadcast/presence channels
+
+**Storage & Authentication**
+- Buckets, objects, signed URLs, public/private policies
+- Auth (GoTrue): JWTs, cookie/session, magic links, OAuth flows
+- Edge Functions (Deno): server-side code calling Supabase with secrets
+
+### Key Vulnerabilities
+
+**Row Level Security (RLS)**
+- Policies check `auth.uid()` for SELECT but forget UPDATE/DELETE/INSERT
+- Missing tenant constraints (`org_id`/`tenant_id`) allow cross-tenant access
+- Policies rely on client-provided columns instead of JWT claims
+- Complex joins where policy is applied after filters
+
+**PostgREST & REST**
+- Filter exploitation: `eq`, `neq`, `or`, `is`, `in` with embedded relations
+- Search leaks: generous `LIKE`/`ILIKE` filters with missing RLS
+- IDOR patterns: accessing resources by ID, slug, or email
+- Mass assignment: PATCH updating unintended columns
+
+**RPC Functions**
+- `SECURITY DEFINER` + missing owner checks → vertical/horizontal bypass
+- Trusting client-supplied `user_id`/`tenant_id` rather than `auth.uid()`
+- `set search_path` vulnerabilities
+
+**Storage**
+- Public buckets with sensitive data
+- List operations exposing object keys
+- Signed URL reuse across tenants/paths
+- Content-type abuse: HTML/SVG served as executable content
+
+**Edge Functions**
+- Trusting Authorization/apikey headers without JWT verification
+- CORS: wildcard origins with credentials
+- SSRF via fetch to internal endpoints
+- Secrets exposed via error traces
+
+### Testing Approach
+
+1. **Inventory surfaces** - Map REST, Storage, GraphQL, Realtime, Auth, Functions endpoints
+2. **Obtain principals** - Collect tokens for anon, user A/B, admin; check for `service_role` leaks
+3. **Build matrix** - Resource × Action × Principal
+4. **REST vs GraphQL** - Test both to find parity gaps
+5. **Cross-principal** - Swap IDs, tenants, and transports across principals
+
+## Firebase / Firestore Skill
+
+The Firebase skill covers security testing for applications using Firebase services.
+
+### Attack Surface Coverage
+
+**Data Stores**
+- Firestore: documents/collections, security rules, REST/SDK
+- Realtime Database: JSON tree with separate rules
+- Cloud Storage: bucket rules and signed URLs
+
+**Authentication & Server-Side**
+- Auth ID tokens, custom claims, anonymous/sign-in providers
+- App Check attestation (and its limits)
+- Cloud Functions (onCall/onRequest, triggers)
+- Admin SDK (bypasses rules)
+
+### Key Vulnerabilities
+
+**Firestore Rules**
+- `allow read: if request.auth != null` — any authenticated user reads all data
+- Missing per-field validation (allows adding `isAdmin`/`role` fields)
+- Using client-supplied IDs instead of `resource.data.ownerId == request.auth.uid`
+- Over-broad list rules on root collections
+
+**Firestore Queries**
+- Use REST to avoid SDK client-side constraints
+- Probe composite index requirements
+- `collectionGroup` queries bypassing per-collection rules
+- Pagination cursor exploitation
+
+**Realtime Database**
+- Misconfigured rules exposing entire JSON trees
+- `.read/.write: true` or `auth != null` at high-level nodes
+- Privilege-bearing node writes (roles, org membership)
+
+**Cloud Storage**
+- Public reads on sensitive buckets/paths
+- Signed URLs with long TTL, replayable across tenants
+- List operations exposing object keys
+- HTML/SVG uploads executing scripts
+
+**Cloud Functions**
+- Trusting client `uid`/`orgId` from request body instead of `context.auth`
+- Missing `aud`/`iss` verification when manually parsing tokens
+- Over-broad CORS
+- Triggers granting roles based on client-controlled document content
+
+### Testing Approach
+
+1. **Extract config** - Get project config from client bundle
+2. **Obtain principals** - Collect tokens for unauth, anonymous, user A/B, admin
+3. **Build matrix** - Resource × Action × Principal across Firestore/Realtime/Storage/Functions
+4. **SDK vs REST** - Exercise every action via both to detect parity gaps
+5. **Cross-principal** - Swap document paths, tenants, and user IDs
+
+## Technology Skill Benefits
+
+Technology skills provide:
+
+- **Service-specific security models** - Understanding of RLS, security rules, and platform-specific authorization
+- **Common misconfigurations** - Knowledge of frequent setup errors and their exploitation
+- **Multi-channel testing** - Coverage across REST, GraphQL, SDK, and specialized endpoints
+- **Bypass techniques** - Platform-specific methods to evade protections
+- **Validation patterns** - Service-appropriate evidence requirements
+
+## Combining with Vulnerability Skills
+
+Technology skills work best when combined with vulnerability skills:
+
+```python
+# Test Supabase RLS for authorization issues
+create_agent(
+    task="Test Row Level Security policies for cross-tenant access",
+    skills="idor,business_logic,supabase"
+)
+
+# Test Firebase authentication and authorization
+create_agent(
+    task="Test Firestore security rules and Cloud Functions",
+    skills="authentication_jwt,idor,firebase_firestore"
+)
+```
+
+The technology skill provides platform context (endpoints, mechanisms, common patterns), while vulnerability skills provide exploitation techniques.
+
+## When to Use Technology Skills
+
+Load technology skills when:
+
+- Testing applications using Supabase or Firebase as the backend
+- You need to test platform-specific security mechanisms (RLS, security rules)
+- The application uses platform features requiring specialized knowledge (Edge Functions, Cloud Functions)
+- You want to identify common platform misconfigurations
+- You need to test across multiple platform channels (REST, GraphQL, Realtime)
+
+## Future Technology Skills
+
+Upcoming technology skills include:
+
+- Auth0 and authentication providers
+- Stripe and payment gateways
+- AWS services (Cognito, AppSync, API Gateway)
+- Hasura and other GraphQL backends
+- Clerk and modern authentication platforms
+
+<Note>
+Technology skills are maintained to track platform updates, API changes, and emerging security patterns. Request new technology skills via [GitHub issues](https://github.com/usestrix/strix/issues).
+</Note>

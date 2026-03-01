@@ -1,0 +1,251 @@
+---
+title: Command-Line Options
+description: Complete reference for all Strix command-line options and parameters
+---
+
+This page provides detailed information about every command-line option available in Strix.
+
+## Target Options
+
+### --target, -t
+
+**Required**. Specifies the target to test. You can provide this option multiple times to scan multiple targets simultaneously.
+
+<ParamField path="--target" type="string" required>
+  The target to test. Strix automatically detects the target type:
+  
+  **Web Applications**
+  ```bash
+  strix --target https://example.com
+  strix --target http://localhost:3000
+  ```
+  
+  **GitHub Repositories**
+  ```bash
+  strix --target https://github.com/user/repo
+  strix --target git@github.com:user/repo.git
+  ```
+  
+  **Local Code**
+  ```bash
+  strix --target ./my-project
+  strix --target /absolute/path/to/code
+  ```
+  
+  **Domain Names**
+  ```bash
+  strix --target example.com
+  ```
+  
+  **IP Addresses**
+  ```bash
+  strix --target 192.168.1.42
+  strix --target 10.0.0.1
+  ```
+  
+  **Multiple Targets** (White-box testing)
+  ```bash
+  strix --target ./source-code --target https://staging.example.com --target https://prod.example.com
+  ```
+</ParamField>
+
+## Instruction Options
+
+### --instruction
+
+Provide inline custom instructions to guide the penetration test.
+
+<ParamField path="--instruction" type="string">
+  Custom instructions as a string. Use this to:
+  
+  - **Focus on specific vulnerabilities**
+    ```bash
+    strix --target example.com --instruction "Focus on authentication vulnerabilities"
+    ```
+  
+  - **Provide test credentials**
+    ```bash
+    strix --target example.com --instruction "Use credentials: admin:password123 to test the admin panel"
+    ```
+  
+  - **Specify testing approach**
+    ```bash
+    strix --target example.com --instruction "Perform thorough API security testing"
+    ```
+  
+  - **Highlight specific endpoints**
+    ```bash
+    strix --target example.com --instruction "Check /api/users endpoint for IDOR vulnerabilities"
+    ```
+  
+  Cannot be used together with `--instruction-file`.
+</ParamField>
+
+### --instruction-file
+
+Provide custom instructions from a file for lengthy or complex requirements.
+
+<ParamField path="--instruction-file" type="string">
+  Path to a text or markdown file containing instructions.
+  
+  ```bash
+  strix --target example.com --instruction-file ./instructions.txt
+  strix --target https://app.com --instruction-file /path/to/detailed_instructions.md
+  ```
+  
+  **Example instruction file:**
+  ```txt
+  # Security Testing Instructions
+  
+  ## Focus Areas
+  - Authentication and session management
+  - API authorization controls
+  - Input validation on user forms
+  
+  ## Test Credentials
+  - Regular user: user@example.com / password123
+  - Admin user: admin@example.com / admin456
+  
+  ## Known Issues to Verify
+  - Check if password reset tokens expire
+  - Verify CORS configuration on API endpoints
+  ```
+  
+  The file must not be empty. Cannot be used together with `--instruction`.
+</ParamField>
+
+## Mode Options
+
+### --non-interactive, -n
+
+Run in non-interactive mode without the TUI.
+
+<ParamField path="--non-interactive" type="boolean" default="false">
+  When enabled, Strix runs in headless mode:
+  
+  - No text-based UI (TUI) is displayed
+  - Output is printed directly to stdout
+  - Process exits automatically when scan completes
+  - Suitable for CI/CD pipelines and automation
+  - Exit code 2 is returned if vulnerabilities are found
+  
+  ```bash
+  strix --target example.com --non-interactive
+  ```
+  
+  See [Non-Interactive Mode](/cli/non-interactive-mode) for details.
+</ParamField>
+
+### --scan-mode, -m
+
+Control the depth and thoroughness of the scan.
+
+<ParamField path="--scan-mode" type="string" default="deep">
+  Choose from three scan modes:
+  
+  **quick** - Fast CI/CD checks
+  - Fastest execution time
+  - Basic vulnerability coverage
+  - Ideal for commit checks and pull requests
+  ```bash
+  strix --target example.com --scan-mode quick
+  ```
+  
+  **standard** - Routine testing
+  - Balanced speed and coverage
+  - Good for regular security reviews
+  ```bash
+  strix --target example.com --scan-mode standard
+  ```
+  
+  **deep** - Thorough security reviews (default)
+  - Most comprehensive testing
+  - Maximum vulnerability coverage
+  - Best for pre-release security audits
+  ```bash
+  strix --target example.com --scan-mode deep
+  ```
+  
+  See [Scan Modes](/cli/scan-modes) for detailed comparison.
+</ParamField>
+
+## Configuration Options
+
+### --config
+
+Use a custom configuration file instead of the default.
+
+<ParamField path="--config" type="string">
+  Path to a JSON configuration file.
+  
+  By default, Strix uses `~/.strix/cli-config.json`. This option allows you to maintain multiple configuration profiles.
+  
+  ```bash
+  strix --target example.com --config ./custom-config.json
+  ```
+  
+  **Example configuration file:**
+  ```json
+  {
+    "strix_llm": "openai/gpt-4",
+    "llm_api_base": "https://api.openai.com/v1",
+    "llm_timeout": 300,
+    "strix_reasoning_effort": "high"
+  }
+  ```
+  
+  The file must exist and contain valid JSON.
+</ParamField>
+
+## Version Option
+
+### --version, -v
+
+Display version information and exit.
+
+<ParamField path="--version" type="boolean">
+  Prints the installed Strix version.
+  
+  ```bash
+  strix --version
+  # Output: strix 1.0.0
+  ```
+</ParamField>
+
+## Option Combinations
+
+### White-Box Testing
+
+Combine local source code with deployed application targets:
+
+```bash
+strix --target ./my-app --target https://staging.example.com --target https://prod.example.com
+```
+
+### Focused CI/CD Testing
+
+Quick scan with specific instructions:
+
+```bash
+strix --target https://example.com \
+  --scan-mode quick \
+  --instruction "Focus on authentication" \
+  --non-interactive
+```
+
+### Comprehensive Pre-Release Audit
+
+Deep scan with detailed instructions:
+
+```bash
+strix --target ./source-code \
+  --target https://staging.example.com \
+  --scan-mode deep \
+  --instruction-file ./security-requirements.md
+```
+
+## See Also
+
+- [strix](/cli/strix) - Main command reference
+- [Examples](/cli/examples) - Common usage patterns
+- [Scan Modes](/cli/scan-modes) - Detailed scan mode comparison

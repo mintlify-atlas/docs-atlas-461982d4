@@ -1,0 +1,263 @@
+---
+title: LLM Providers
+description: Configure Strix to work with different LLM providers including OpenAI, Anthropic, Google, and local models
+---
+
+Strix uses [LiteLLM](https://github.com/BerriAI/litellm) to support a wide range of LLM providers. You can use cloud-based models, local models, or the Strix Router for unified access.
+
+## Recommended Models
+
+For best results, we recommend using one of these frontier models:
+
+- **OpenAI GPT-5** - `openai/gpt-5`
+- **Anthropic Claude Sonnet 4.6** - `anthropic/claude-sonnet-4-6`
+- **Google Gemini 3 Pro Preview** - `vertex_ai/gemini-3-pro-preview`
+
+## Strix Router
+
+[Strix Router](https://models.strix.ai) provides a single API key for accessing multiple LLM providers with intelligent routing and $10 free credit on signup.
+
+```bash
+export STRIX_LLM="strix/gpt-5"
+export LLM_API_KEY="your-strix-router-key"
+```
+
+Available models via Strix Router:
+- `strix/gpt-5`
+- `strix/claude-sonnet-4-6`
+- `strix/gemini-3-pro-preview`
+
+<Note>
+  When using the `strix/` prefix, the API base URL is automatically set to `https://models.strix.ai/api/v1`. You don't need to configure `LLM_API_BASE`.
+</Note>
+
+## Cloud Providers
+
+### OpenAI
+
+```bash
+export STRIX_LLM="openai/gpt-5"
+export LLM_API_KEY="sk-..."
+```
+
+Supported models:
+- `openai/gpt-5`
+- `openai/gpt-4o`
+- `openai/o1`
+- `openai/o3-mini`
+
+Get your API key at [platform.openai.com](https://platform.openai.com/).
+
+### Anthropic
+
+```bash
+export STRIX_LLM="anthropic/claude-sonnet-4-6"
+export LLM_API_KEY="sk-ant-..."
+```
+
+Supported models:
+- `anthropic/claude-sonnet-4-6`
+- `anthropic/claude-opus-4`
+- `anthropic/claude-3.5-sonnet`
+
+Get your API key at [console.anthropic.com](https://console.anthropic.com/).
+
+### Google Cloud (Vertex AI)
+
+```bash
+export STRIX_LLM="vertex_ai/gemini-3-pro-preview"
+# Authentication via gcloud CLI or service account
+```
+
+Supported models:
+- `vertex_ai/gemini-3-pro-preview`
+- `vertex_ai/gemini-2.0-flash-exp`
+- `vertex_ai/gemini-1.5-pro`
+
+<Note>
+  Vertex AI uses Google Cloud authentication. You need to authenticate via `gcloud auth application-default login` or set `GOOGLE_APPLICATION_CREDENTIALS` to your service account JSON file.
+</Note>
+
+### AWS Bedrock
+
+```bash
+export STRIX_LLM="bedrock/anthropic.claude-sonnet-4-6-v1:0"
+# Authentication via AWS credentials
+```
+
+Supported models:
+- `bedrock/anthropic.claude-sonnet-4-6-v1:0`
+- `bedrock/anthropic.claude-opus-4-v1:0`
+- `bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0`
+
+<Note>
+  AWS Bedrock uses AWS credentials. Configure your credentials via AWS CLI (`aws configure`) or environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`).
+</Note>
+
+### Azure OpenAI
+
+```bash
+export STRIX_LLM="azure/your-deployment-name"
+export LLM_API_KEY="your-azure-api-key"
+export LLM_API_BASE="https://your-resource.openai.azure.com"
+```
+
+You can also use Azure-specific environment variables:
+
+```bash
+export AZURE_API_KEY="your-azure-api-key"
+export AZURE_API_BASE="https://your-resource.openai.azure.com"
+export AZURE_API_VERSION="2024-02-15-preview"
+```
+
+## Local Models
+
+### Ollama
+
+[Ollama](https://ollama.ai/) lets you run LLMs locally on your machine.
+
+```bash
+export STRIX_LLM="ollama/llama3.1:70b"
+export LLM_API_BASE="http://localhost:11434"
+```
+
+<Note>
+  You don't need to set `LLM_API_KEY` when using Ollama. Make sure Ollama is running (`ollama serve`) before starting Strix.
+</Note>
+
+Recommended models for security testing:
+- `ollama/llama3.1:70b`
+- `ollama/qwen2.5:72b`
+- `ollama/deepseek-v3`
+
+### LM Studio
+
+[LM Studio](https://lmstudio.ai/) provides a local server for running LLMs with an OpenAI-compatible API.
+
+```bash
+export STRIX_LLM="openai/model-name"
+export LLM_API_BASE="http://localhost:1234/v1"
+```
+
+<Note>
+  When using LM Studio, the model name should match the model loaded in LM Studio, or use a generic name like `openai/local-model`.
+</Note>
+
+### Other Local Providers
+
+Strix works with any OpenAI-compatible API endpoint:
+
+```bash
+export STRIX_LLM="openai/your-model"
+export LLM_API_BASE="http://your-server:port/v1"
+```
+
+## Advanced Configuration
+
+### Custom Timeouts
+
+Adjust LLM request timeouts for slower models or connections:
+
+```bash
+export LLM_TIMEOUT="600"  # 10 minutes
+```
+
+### Retry Configuration
+
+Control how many times Strix retries failed LLM requests:
+
+```bash
+export STRIX_LLM_MAX_RETRIES="10"
+```
+
+### Reasoning Effort
+
+Control the reasoning effort level for better or faster responses:
+
+```bash
+# For thorough analysis (slower)
+export STRIX_REASONING_EFFORT="xhigh"
+
+# For quick scans (faster)
+export STRIX_REASONING_EFFORT="medium"
+
+# For minimal overhead
+export STRIX_REASONING_EFFORT="low"
+```
+
+## Provider-Specific Notes
+
+### Using Multiple Providers
+
+You can use different models for different purposes by switching `STRIX_LLM`:
+
+```bash
+# Quick scan with smaller model
+export STRIX_LLM="openai/gpt-4o"
+strix --target ./app --scan-mode quick
+
+# Deep analysis with larger model
+export STRIX_LLM="openai/gpt-5"
+strix --target ./app --scan-mode deep
+```
+
+### Authentication Priority
+
+Strix checks for credentials in this order:
+
+1. `LLM_API_KEY` environment variable
+2. Provider-specific environment variables (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`)
+3. Provider-specific authentication mechanisms (e.g., gcloud, AWS credentials)
+
+### Base URL Priority
+
+Strix checks for base URLs in this order:
+
+1. Automatic detection for `strix/` models
+2. `LLM_API_BASE` environment variable
+3. `OPENAI_API_BASE` environment variable
+4. `LITELLM_BASE_URL` environment variable
+5. `OLLAMA_API_BASE` environment variable
+6. Provider default URLs
+
+## Troubleshooting
+
+### Connection Failed
+
+If you see "LLM CONNECTION FAILED", verify:
+
+1. Your API key is correct and has the necessary permissions
+2. Your model name is correct (e.g., `openai/gpt-5`, not `gpt-5`)
+3. Your API base URL is correct (for local models)
+4. Your network can reach the API endpoint
+5. Your model/deployment exists and is accessible
+
+### Model Not Found
+
+Ensure you're using the correct provider prefix:
+
+- ✅ `openai/gpt-5`
+- ❌ `gpt-5`
+
+### Rate Limiting
+
+If you hit rate limits, you can:
+
+1. Reduce `STRIX_REASONING_EFFORT` to make fewer requests
+2. Use a different model with higher rate limits
+3. Increase your API plan limits
+
+### Local Model Performance
+
+For best results with local models:
+
+1. Use models with at least 70B parameters
+2. Ensure you have sufficient RAM/VRAM
+3. Use GPU acceleration when possible
+4. Consider using `--scan-mode quick` for faster scans
+
+## See Also
+
+- [Environment Variables](/configuration/environment-variables)
+- [Config File](/configuration/config-file)
+- [LiteLLM Providers Documentation](https://docs.litellm.ai/docs/providers)

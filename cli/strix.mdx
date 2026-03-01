@@ -1,0 +1,136 @@
+---
+title: strix
+description: Run Strix penetration testing scans from the command line
+---
+
+The `strix` command is the main entry point for running AI-powered penetration tests. You can scan web applications, GitHub repositories, local code, domains, and IP addresses.
+
+## Usage
+
+```bash
+strix [OPTIONS]
+```
+
+## Quick Examples
+
+```bash
+# Web application penetration test
+strix --target https://example.com
+
+# GitHub repository analysis
+strix --target https://github.com/user/repo
+
+# Local code analysis
+strix --target ./my-project
+
+# Multiple targets (white-box testing)
+strix --target ./my-project --target https://staging.example.com
+```
+
+## Options
+
+<ParamField path="-t, --target" type="string" required>
+  Target to test. Can be:
+  - URL (e.g., `https://example.com`)
+  - GitHub repository (e.g., `https://github.com/user/repo` or `git@github.com:user/repo.git`)
+  - Local directory path (e.g., `./my-project`)
+  - Domain name (e.g., `example.com`)
+  - IP address (e.g., `192.168.1.42`)
+  
+  You can specify this option multiple times for multi-target scans.
+</ParamField>
+
+<ParamField path="--instruction" type="string">
+  Custom instructions for the penetration test. Use this to:
+  - Focus on specific vulnerability types (e.g., "Focus on IDOR and XSS")
+  - Specify testing approaches (e.g., "Perform thorough authentication testing")
+  - Provide test credentials (e.g., "Use credentials: admin:password123")
+  - Highlight areas of interest (e.g., "Check login API endpoint for security issues")
+  
+  Cannot be used with `--instruction-file`.
+</ParamField>
+
+<ParamField path="--instruction-file" type="string">
+  Path to a file containing detailed custom instructions for the penetration test.
+  
+  Use this when you have lengthy or complex instructions saved in a file.
+  
+  Example: `--instruction-file ./detailed_instructions.txt`
+  
+  Cannot be used with `--instruction`.
+</ParamField>
+
+<ParamField path="-n, --non-interactive" type="boolean" default="false">
+  Run in non-interactive mode (no TUI, exits on completion).
+  
+  By default, Strix runs in interactive mode with a text-based user interface (TUI). Use this flag for CI/CD pipelines or automated scanning.
+  
+  In non-interactive mode:
+  - No TUI is displayed
+  - Vulnerabilities are printed to stdout in real-time
+  - Process exits automatically when scan completes
+  - Exit code 2 is returned if vulnerabilities are found
+</ParamField>
+
+<ParamField path="-m, --scan-mode" type="string" default="deep">
+  Scan mode controlling depth and thoroughness.
+  
+  Options:
+  - `quick` - Fast CI/CD checks with basic coverage
+  - `standard` - Routine testing with balanced speed/depth
+  - `deep` - Thorough security reviews (default)
+  
+  See [Scan Modes](/cli/scan-modes) for detailed comparison.
+</ParamField>
+
+<ParamField path="--config" type="string">
+  Path to a custom config file (JSON) to use instead of `~/.strix/cli-config.json`.
+  
+  This allows you to maintain multiple configuration profiles for different environments.
+</ParamField>
+
+<ParamField path="-v, --version" type="boolean">
+  Display the Strix version and exit.
+</ParamField>
+
+## Environment Variables
+
+Strix requires certain environment variables to be configured. See the [Configuration](/configuration/environment-variables) guide for details.
+
+### Required
+
+- `STRIX_LLM` - Model name to use with litellm (e.g., `openai/gpt-4`)
+
+### Optional
+
+- `LLM_API_KEY` - API key for the LLM provider (not needed for local models, Vertex AI, AWS, etc.)
+- `LLM_API_BASE` - Custom API base URL for local models (e.g., Ollama, LMStudio)
+- `PERPLEXITY_API_KEY` - API key for Perplexity AI web search (enables real-time research)
+- `STRIX_REASONING_EFFORT` - Reasoning effort level: `none`, `minimal`, `low`, `medium`, `high`, `xhigh` (default: `high`)
+
+## Output
+
+Strix creates a timestamped directory in `strix_runs/` containing:
+
+- Vulnerability reports in JSON and Markdown formats
+- Tool execution logs
+- Agent activity traces
+- Scan metadata and statistics
+
+See [Reports](/cli/reports) for details on output format.
+
+## Exit Codes
+
+In non-interactive mode, Strix uses exit codes to indicate scan results:
+
+- `0` - Scan completed successfully, no vulnerabilities found
+- `1` - Error occurred during execution
+- `2` - Scan completed successfully, vulnerabilities were found
+
+See [Exit Codes](/cli/exit-codes) for integration with CI/CD pipelines.
+
+## See Also
+
+- [Interactive Mode](/cli/interactive-mode) - Using the TUI interface
+- [Non-Interactive Mode](/cli/non-interactive-mode) - Automation and CI/CD integration
+- [Examples](/cli/examples) - Common use cases and workflows
