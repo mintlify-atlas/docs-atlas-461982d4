@@ -1,97 +1,108 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Welcome to Strix"
+description: "Open-source AI hackers to find and fix your app's vulnerabilities"
 ---
 
-## Setting up
+Strix is an autonomous AI-powered penetration testing tool that uses intelligent agents to discover and validate security vulnerabilities in your applications. Unlike traditional scanners, Strix thinks and acts like a real security researcher, combining code analysis, web testing, and exploitation techniques to find real issues.
 
-Get your documentation site up and running in minutes.
+## Get Started
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Run your first security scan in under 5 minutes
+  </Card>
   <Card
     title="Installation"
     icon="download"
     href="/installation"
   >
-    Install Strix and set up your security testing environment.
+    Install Strix and configure your environment
   </Card>
   <Card
-    title="Configuration"
-    icon="gear"
-    href="/configuration/environment-variables"
-  >
-    Configure LLM providers and environment settings.
-  </Card>
-    <Card
-    title="Core Concepts"
+    title="How It Works"
     icon="brain"
     href="/concepts/how-it-works"
   >
-    Understand how Strix agents work together to find vulnerabilities.
+    Understand Strix's multi-agent architecture
   </Card>
   <Card
     title="CLI Reference"
     icon="terminal"
     href="/cli/strix"
   >
-    Command-line reference for Strix penetration testing.
+    Complete command-line reference
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Key Features
 
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
+<CardGroup cols={2}>
   <Card
-    title="Basic Usage"
-    icon="terminal"
-    href="/usage/basic-usage"
+    title="Autonomous Agents"
+    icon="robot"
+    href="/concepts/agents"
   >
-    Learn the core commands and workflows.
+    AI agents collaborate to find and exploit vulnerabilities
   </Card>
   <Card
-    title="Skills"
-    icon="book"
+    title="Security Toolkit"
+    icon="toolbox"
+    href="/concepts/tools"
+  >
+    Browser automation, proxy, terminal, and Python execution
+  </Card>
+  <Card
+    title="Specialized Skills"
+    icon="book-open"
     href="/skills/overview"
   >
-    Explore specialized security testing knowledge packages.
+    Pre-built knowledge for frameworks and vulnerability types
   </Card>
   <Card
     title="CI/CD Integration"
     icon="code-branch"
     href="/integrations/ci-cd"
   >
-    Integrate Strix into your deployment pipeline.
+    Integrate security testing into your pipeline
   </Card>
-  <Card
-    title="Examples"
-    icon="code"
-    href="/cli/examples"
-  >
-    Common usage patterns and real-world examples.
-  </Card>
-</Columns>
+</CardGroup>
 
-## Need inspiration?
+## What Makes Strix Different?
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<AccordionGroup>
+  <Accordion title="Real Vulnerability Validation">
+    Strix doesn't just flag potential issues—it validates them with working proof-of-concept exploits. Every reported vulnerability includes detailed reproduction steps and evidence.
+  </Accordion>
+  
+  <Accordion title="Multi-Agent Collaboration">
+    Multiple specialized AI agents work together, sharing information and coordinating attacks just like a real penetration testing team.
+  </Accordion>
+  
+  <Accordion title="White-Box and Black-Box Testing">
+    Test deployed applications, analyze source code, or combine both for comprehensive security coverage.
+  </Accordion>
+  
+  <Accordion title="Customizable Testing">
+    Use custom instructions to focus on specific vulnerabilities, provide credentials, or guide the testing approach.
+  </Accordion>
+</AccordionGroup>
+
+## Quick Example
+
+```bash
+# Test a web application
+strix --target https://example.com
+
+# Test local source code with deployed app (white-box)
+strix --target ./my-app --target https://staging.example.com
+
+# Focus on specific vulnerabilities
+strix --target example.com --instruction "Focus on authentication and authorization"
+
+# Quick CI/CD scan
+strix --target https://app.com --scan-mode quick --non-interactive
+```
