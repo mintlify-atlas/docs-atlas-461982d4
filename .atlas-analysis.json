@@ -1,0 +1,170 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Strix",
+  "projectDescription": "Open-source AI hackers to find and fix your app's vulnerabilities",
+  "theme": "aspen",
+  "primaryColor": "#dc2626",
+  "lightColor": "#ef4444",
+  "darkColor": "#991b1b",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/how-it-works",
+              "concepts/agents",
+              "concepts/tools",
+              "concepts/skills",
+              "concepts/vulnerability-detection"
+            ]
+          },
+          {
+            "group": "Usage",
+            "pages": [
+              "usage/basic-usage",
+              "usage/advanced-testing",
+              "usage/scan-modes",
+              "usage/custom-instructions",
+              "usage/multi-target-testing"
+            ]
+          },
+          {
+            "group": "Skills",
+            "pages": [
+              "skills/overview",
+              "skills/vulnerabilities",
+              "skills/frameworks",
+              "skills/technologies",
+              "skills/creating-skills"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/ci-cd",
+              "integrations/github-actions",
+              "integrations/gitlab-ci",
+              "integrations/docker"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment-variables",
+              "configuration/llm-providers",
+              "configuration/config-file",
+              "configuration/docker-settings"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI Reference",
+        "groups": [
+          {
+            "group": "Commands",
+            "pages": [
+              "cli/strix",
+              "cli/options",
+              "cli/examples"
+            ]
+          },
+          {
+            "group": "Modes",
+            "pages": [
+              "cli/interactive-mode",
+              "cli/non-interactive-mode",
+              "cli/scan-modes"
+            ]
+          },
+          {
+            "group": "Output",
+            "pages": [
+              "cli/reports",
+              "cli/vulnerability-format",
+              "cli/exit-codes"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Python API",
+        "groups": [
+          {
+            "group": "Core",
+            "pages": [
+              "api/agents",
+              "api/tools",
+              "api/runtime",
+              "api/llm"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "api/config",
+              "api/state"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Resources",
+        "groups": [
+          {
+            "group": "Community",
+            "pages": [
+              "resources/contributing",
+              "resources/faq",
+              "resources/troubleshooting",
+              "resources/changelog"
+            ]
+          },
+          {
+            "group": "Security",
+            "pages": [
+              "resources/responsible-use",
+              "resources/security-policy"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Autonomous AI agents for penetration testing",
+    "Multi-agent collaboration and orchestration",
+    "Comprehensive security toolkit (proxy, browser, terminal, Python)",
+    "Real vulnerability validation with proof-of-concepts",
+    "Customizable skills system for specialized testing",
+    "CI/CD integration with GitHub Actions and GitLab CI",
+    "Interactive TUI and headless CLI modes",
+    "Support for multiple LLM providers"
+  ],
+  "publicApiSurface": [
+    "strix --target <target>",
+    "strix --target <url> --instruction <instruction>",
+    "strix --target <path> --scan-mode <mode>",
+    "strix --non-interactive --target <target>",
+    "strix --target <repo> --target <url>",
+    "strix --config <config-file>",
+    "BaseAgent",
+    "AgentState",
+    "LLM",
+    "LLMConfig",
+    "Config",
+    "SandboxRuntime",
+    "process_tool_invocations"
+  ]
+}
